@@ -1,130 +1,164 @@
-"use client"
+"use client";
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { LogOut, Package, Settings, CreditCard } from "lucide-react"
-import { Card } from "@/components/ui/card"
+import { useSession } from "next-auth/react"
+import { ToolCard } from "@/components/tool-card"
+import User from "@/models/User";
+import { Sparkles, Zap, Image as ImageIcon, PenTool, LayoutTemplate, Search, ExternalLink } from "lucide-react"
 
-interface User {
-  id: number
-  name: string
-  email: string
-  plan: string
-  trial: boolean
+// Client component wrapper for session check, but we need data fetching too.
+// Converting to Client Component for now to keep it simple with existing code structure, 
+// using useEffect for fetch or separate Server Component. 
+// Let's keep it client-side fetching for now since the whole dashboard is useClient.
+
+interface Tool {
+    _id: string;
+    name: string;
+    description: string;
+    category: string;
+    status: "active" | "maintenance" | "inactive";
+    url: string;
 }
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { data: session, status } = useSession()
+  const [tools, setTools] = useState<Tool[]>([]);
+  const [isLoadingTools, setIsLoadingTools] = useState(true);
 
   useEffect(() => {
-    const userData = localStorage.getItem("user")
-    if (!userData) {
+    if (status === "unauthenticated") {
       router.push("/login")
-      return
     }
-    setUser(JSON.parse(userData))
-    setIsLoading(false)
-  }, [router])
+  }, [status, router])
 
-  const handleLogout = () => {
-    localStorage.removeItem("user")
-    router.push("/")
-  }
+  useEffect(() => {
+      async function fetchTools() {
+          try {
+              const res = await fetch('/api/user/tools');
+              if (res.ok) {
+                  const data = await res.json();
+                  setTools(data);
+              }
+          } catch (error) {
+              console.error("Failed to fetch tools", error);
+          } finally {
+              setIsLoadingTools(false);
+          }
+      }
+      fetchTools();
+  }, []);
 
-  if (isLoading) {
+  if (status === "loading") {
     return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
   }
 
-  if (!user) return null
+  if (!session?.user) return null
+
+  // The following code block from the instruction is designed for a Server Component.
+  // It cannot be directly executed in a Client Component with `await` calls outside of an async function.
+  // To make it syntactically correct within this Client Component context,
+  // I'm commenting it out as a placeholder for server-side logic.
+  // If the intention is to convert this to a Server Component,
+  // then 'use client' and client-side hooks (useState, useEffect, useRouter, useSession) would need to be removed or refactored.
+
+  /*
+  if (!session?.user) await dbConnect(); // This line is problematic in a client component
+
+  // Fetch all active tools
+  const allTools = await Tool.find({ status: 'active' }).sort({ createdAt: -1 });
+
+  // Get user details for subscription filtering
+  const dbUser = await User.findById((session.user as any).id).populate({
+      path: 'subscriptions.packageId',
+      populate: { path: 'tools' }
+  });
+
+  // Collect IDs of tools accessible to the user
+  const accessibleToolIds = new Set<string>();
+  
+  if (dbUser.role === 'admin') {
+      // Admin sees everything
+      allTools.forEach(t => accessibleToolIds.add(t._id.toString()));
+  } else {
+      const activeSubs = dbUser.subscriptions.filter((sub: any) => {
+          return sub.status === 'active' && new Date(sub.endDate) > new Date();
+      });
+
+      activeSubs.forEach((sub: any) => {
+          if (sub.packageId && sub.packageId.tools) {
+              sub.packageId.tools.forEach((t: any) => {
+                  accessibleToolIds.add(t._id.toString());
+              });
+          }
+      });
+  }
+
+  // Filter tools
+  const tools = allTools.filter(t => accessibleToolIds.has(t._id.toString()));
+  */
+
+  const announcements = [
+    { id: 1, title: "New SEO Tools Added", date: "2024-03-20" },
+    { id: 2, title: "System Maintenance Scheduled", date: "2024-03-25" },
+  ];
+  // Helper to map category to icon
+  const getIcon = (category: string) => {
+      switch(category) {
+          case 'SEO': return <Search className="w-6 h-6" />;
+          case 'AI': return <Sparkles className="w-6 h-6" />;
+          case 'Design': return <PenTool className="w-6 h-6" />;
+          case 'Writing': return <Zap className="w-6 h-6" />;
+          default: return <ExternalLink className="w-6 h-6" />;
+      }
+  }
 
   return (
-    <div className="min-h-screen bg-background pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-12">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2">Dashboard</h1>
-            <p className="text-foreground/60">Welcome back, {user.name}!</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 bg-destructive/20 text-destructive rounded-lg hover:bg-destructive/30 transition font-medium"
-          >
-            <LogOut size={18} />
-            Logout
-          </button>
-        </div>
-
-        {/* User Info Card */}
-        <Card className="bg-card border-border p-6 mb-8">
-          <h2 className="text-xl font-bold text-foreground mb-4">Account Information</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <p className="text-foreground/60 text-sm mb-1">Name</p>
-              <p className="text-foreground font-semibold">{user.name}</p>
-            </div>
-            <div>
-              <p className="text-foreground/60 text-sm mb-1">Email</p>
-              <p className="text-foreground font-semibold">{user.email}</p>
-            </div>
-            <div>
-              <p className="text-foreground/60 text-sm mb-1">Current Plan</p>
-              <p className="text-foreground font-semibold capitalize">
-                {user.plan} {user.trial && "(Trial)"}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <Card className="bg-card border-border p-6 hover:border-primary/50 transition cursor-pointer">
-            <Package className="w-8 h-8 text-primary mb-4" />
-            <h3 className="text-lg font-bold text-foreground mb-2">My Tools</h3>
-            <p className="text-foreground/60 text-sm mb-4">Access all your premium tools</p>
-            <Link href="#" className="text-primary text-sm font-semibold hover:underline">
-              View Tools →
-            </Link>
-          </Card>
-
-          <Card className="bg-card border-border p-6 hover:border-primary/50 transition cursor-pointer">
-            <CreditCard className="w-8 h-8 text-accent mb-4" />
-            <h3 className="text-lg font-bold text-foreground mb-2">Billing</h3>
-            <p className="text-foreground/60 text-sm mb-4">Manage your subscription and payments</p>
-            <Link href="/dashboard/billing" className="text-primary text-sm font-semibold hover:underline">
-              View Billing →
-            </Link>
-          </Card>
-
-          <Card className="bg-card border-border p-6 hover:border-primary/50 transition cursor-pointer">
-            <Settings className="w-8 h-8 text-secondary mb-4" />
-            <h3 className="text-lg font-bold text-foreground mb-2">Settings</h3>
-            <p className="text-foreground/60 text-sm mb-4">Update your account settings</p>
-            <Link href="/dashboard/settings" className="text-primary text-sm font-semibold hover:underline">
-              Go to Settings →
-            </Link>
-          </Card>
-        </div>
-
-        {/* Available Tools */}
-        <Card className="bg-card border-border p-6">
-          <h2 className="text-xl font-bold text-foreground mb-6">Available Tools</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {["Semrush", "ChatGPT Plus", "Canva Pro", "Grammarly", "Adobe Suite", "Ahrefs"].map((tool) => (
-              <div
-                key={tool}
-                className="p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 transition cursor-pointer text-center"
-              >
-                <p className="text-foreground font-semibold">{tool}</p>
-                <button className="mt-2 text-sm text-primary hover:underline">Launch →</button>
-              </div>
-            ))}
-          </div>
-        </Card>
+    <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
       </div>
+      
+      {/* Status Banner */}
+      <div className="w-full bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2 text-blue-500">
+               <Sparkles className="w-5 h-5 fill-blue-500/20" />
+               <h3 className="font-semibold">What's New</h3>
+          </div>
+          <p className="text-sm text-foreground/80 mt-1 pl-7">
+              Welcome to your new dashboard! Tools are now dynamically managed.
+          </p>
+      </div>
+
+       <div className="space-y-4">
+             <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-semibold">Your Tools</h3>
+             </div>
+             
+             {isLoadingTools ? (
+                 <div className="text-center py-8">Loading tools...</div>
+             ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {tools.map((tool) => (
+                        <ToolCard 
+                            key={tool._id}
+                            name={tool.name}
+                            description={tool.description}
+                            category={tool.category}
+                            status={tool.status}
+                            icon={getIcon(tool.category)}
+                            url={`/dashboard/tools/${tool._id}`}
+                        />
+                    ))}
+                    {tools.length === 0 && (
+                        <p className="col-span-3 text-center py-10 text-muted-foreground">
+                            No tools available yet. Admin needs to add them.
+                        </p>
+                    )}
+                </div>
+             )}
+       </div>
     </div>
   )
 }

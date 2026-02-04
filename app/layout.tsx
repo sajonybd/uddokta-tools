@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
+import { AuthProvider } from "@/components/providers"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
   title: "SEO Tools Pro - Premium SEO Software Made Affordable",
   description:
     "Access premium SEO tools like Semrush, ChatGPT, Canva and more at affordable prices. Perfect for agencies, freelancers, and businesses.",
-  generator: "v0.app",
+  generator: "",
   icons: {
     icon: [
       {
@@ -39,8 +40,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased bg-background text-foreground`}>
-        {children}
-        <Analytics />
+        <AuthProvider>
+          {children}
+          <Analytics />
+        </AuthProvider>
       </body>
     </html>
   )

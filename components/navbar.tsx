@@ -3,9 +3,11 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Menu, X } from "lucide-react"
+import { useSession, signOut } from "next-auth/react"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const { data: session } = useSession()
 
   return (
     <nav className="fixed top-0 w-full bg-background/95 backdrop-blur-md border-b-2 border-primary/10 z-50">
@@ -26,15 +28,27 @@ export function Navbar() {
             <a href="#features" className="text-foreground/70 hover:text-primary transition font-medium">
               Features
             </a>
-            <Link href="/login" className="text-foreground/70 hover:text-primary transition font-medium">
-              Login
-            </Link>
-            <Link
-              href="/signup"
-              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition font-medium shadow-xl shadow-primary/30"
-            >
-              Sign Up
-            </Link>
+            {session ? (
+               <div className="flex items-center gap-4">
+                  <Link href="/dashboard" className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition font-medium">
+                      Client Area
+                  </Link>
+                  <span className="text-sm font-medium hidden lg:inline-block">{session.user?.name}</span>
+               </div>
+            ) : (
+                <>
+                    <Link href="/login" className="text-foreground/70 hover:text-primary transition font-medium">
+                      Login
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition font-medium shadow-xl shadow-primary/30"
+                    >
+                      Sign Up
+                    </Link>
+                </>
+            )}
+
           </div>
 
           <button className="md:hidden" onClick={() => setIsOpen(!isOpen)}>
@@ -53,15 +67,29 @@ export function Navbar() {
             <a href="#features" className="block text-foreground/70 hover:text-primary py-2 font-medium">
               Features
             </a>
-            <Link href="/login" className="block text-foreground/70 hover:text-primary py-2 font-medium">
-              Login
-            </Link>
-            <Link
-              href="/signup"
-              className="block w-full px-6 py-2 bg-primary text-primary-foreground rounded-lg text-center font-medium shadow-xl shadow-primary/30"
-            >
-              Sign Up
-            </Link>
+             {session ? (
+                 <>
+                    <Link href="/dashboard" className="block w-full px-6 py-2 bg-primary/10 text-primary rounded-lg text-center font-medium">
+                        Client Area
+                    </Link>
+                    <div className="px-3 py-2 text-sm font-medium text-foreground/70">
+                        Signed in as {session.user?.name}
+                    </div>
+                     {/* Logout already available in dashboard, but we can keep it here or remove */}
+                 </>
+             ) : (
+                <>
+                    <Link href="/login" className="block text-foreground/70 hover:text-primary py-2 font-medium">
+                      Login
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="block w-full px-6 py-2 bg-primary text-primary-foreground rounded-lg text-center font-medium shadow-xl shadow-primary/30"
+                    >
+                      Sign Up
+                    </Link>
+                </>
+             )}
           </div>
         )}
       </div>
