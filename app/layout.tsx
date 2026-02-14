@@ -25,6 +25,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { FloatingContact } from "@/components/floating-contact";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,6 +41,7 @@ export default function RootLayout({
           </CurrencyProvider>
           <Toaster />
           <Analytics />
+          <FloatingContact />
         </AuthProvider>
       </body>
     </html>

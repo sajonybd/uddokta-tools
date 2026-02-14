@@ -29,16 +29,22 @@ export default function EditToolPage() {
   // State to track if internal page is selected
   const [isInternal, setIsInternal] = useState(false);
 
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+
   useEffect(() => {
     if (!id) return;
     
-    // Fetch both tool and available pages
+    // Fetch tool, available pages, and categories
     Promise.all([
         fetch(`/api/tools/${id}`).then(res => res.json()),
-        fetch('/api/admin/pages').then(res => res.json())
-    ]).then(([toolData, pagesData]) => {
+        fetch('/api/admin/pages').then(res => res.json()),
+        fetch('/api/admin/categories').then(res => res.json())
+    ]).then(([toolData, pagesData, categoriesData]) => {
         setTool(toolData);
         setPages(pagesData);
+        setCategories(categoriesData);
+        setSelectedCategory(toolData.category);
         // Set initial internal state
         if (toolData.linkedPage) setIsInternal(true);
         setLoading(false);
@@ -54,6 +60,9 @@ export default function EditToolPage() {
     setSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
+    if (selectedCategory) {
+        formData.set('category', selectedCategory);
+    }
     const data: any = Object.fromEntries(formData);
     
     // Handle linkedPage logic: if 'none', send null
@@ -119,17 +128,19 @@ export default function EditToolPage() {
 
         <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
-            <Select name="category" defaultValue={tool.category}>
+            <Select 
+                name="category" 
+                value={selectedCategory} 
+                onValueChange={setSelectedCategory}
+            >
                 <SelectTrigger>
                 <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                <SelectItem value="SEO">SEO</SelectItem>
-                <SelectItem value="Design">Design</SelectItem>
-                <SelectItem value="Writing">Writing</SelectItem>
-                <SelectItem value="AI">AI</SelectItem>
-                <SelectItem value="Video">Video</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                {categories.map((cat: any) => (
+                    <SelectItem key={cat._id} value={cat.name}>{cat.name}</SelectItem>
+                ))}
+                {categories.length === 0 && <SelectItem value="SEO">SEO (Default)</SelectItem>}
                 </SelectContent>
             </Select>
         </div>

@@ -14,7 +14,8 @@ import {
   Package,
   ShoppingCart,
   Ticket,
-  Banknote
+  Banknote,
+  ListOrdered
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 
@@ -82,6 +83,11 @@ export function DashboardSidebar() {
        href: "/admin/users",
        icon: Users,
     },
+    {
+       title: "Manage Categories",
+       href: "/admin/categories",
+       icon: ListOrdered,
+     },
     {
        title: "Manage Packages",
        href: "/admin/packages",

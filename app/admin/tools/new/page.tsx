@@ -19,12 +19,24 @@ export default function NewToolPage() {
   const [loading, setLoading] = useState(false);
   const [pages, setPages] = useState<any[]>([]);
   const [isInternal, setIsInternal] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
 
   useEffect(() => {
       fetch('/api/admin/pages')
         .then(res => res.json())
         .then(data => setPages(data))
         .catch(err => console.error("Failed to load pages"));
+
+      fetch('/api/admin/categories')
+        .then(res => res.json())
+        .then(data => {
+            setCategories(data);
+            if (data.length > 0 && !selectedCategory) {
+                setSelectedCategory(data[0].name);
+            }
+        })
+        .catch(err => console.error("Failed to load categories"));
   }, []);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -32,6 +44,9 @@ export default function NewToolPage() {
     setLoading(true);
 
     const formData = new FormData(event.currentTarget);
+    if (selectedCategory) {
+        formData.set('category', selectedCategory);
+    }
     const data = Object.fromEntries(formData);
     
     if (data.linkedPage === 'none') {
@@ -71,17 +86,19 @@ export default function NewToolPage() {
 
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
-          <Select name="category" defaultValue="SEO">
+          <Select 
+            name="category" 
+            value={selectedCategory} 
+            onValueChange={setSelectedCategory}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="SEO">SEO</SelectItem>
-              <SelectItem value="Design">Design</SelectItem>
-              <SelectItem value="Writing">Writing</SelectItem>
-              <SelectItem value="AI">AI</SelectItem>
-              <SelectItem value="Video">Video</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
+              {categories.map((cat: any) => (
+                <SelectItem key={cat._id} value={cat.name}>{cat.name}</SelectItem>
+              ))}
+              {categories.length === 0 && <SelectItem value="SEO">SEO (Default)</SelectItem>}
             </SelectContent>
           </Select>
         </div>
