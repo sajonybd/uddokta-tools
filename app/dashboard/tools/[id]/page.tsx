@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, ExternalLink, Info, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ExternalLink, Info, AlertTriangle, Lock } from "lucide-react";
 import Link from "next/link";
 import dbConnect from "@/lib/mongodb";
 import Tool from "@/models/Tool";
-import { notFound } from "next/navigation";
+import User from "@/models/User";
+import { notFound, redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 interface ToolAccessPageProps {
   params: Promise<{
@@ -18,7 +21,10 @@ export default async function ToolAccessPage(props: ToolAccessPageProps) {
   const params = await props.params;
   const { id } = params;
   await dbConnect();
-  
+
+  const session = await getServerSession(authOptions);
+  if (!session) redirect("/login");
+
   let tool;
   try {
      tool = await Tool.findById(id);
@@ -28,6 +34,62 @@ export default async function ToolAccessPage(props: ToolAccessPageProps) {
 
   if (!tool) {
     notFound();
+  }
+
+  // Access Control Logic
+  const user = session.user as any;
+  let hasAccess = false;
+
+  if (user.role === 'admin') {
+      hasAccess = true;
+  } else {
+      const dbUser = await User.findById(user.id).populate({
+          path: 'subscriptions.packageId',
+          populate: { path: 'tools' }
+      });
+      
+      if (dbUser) {
+           const activeSubs = dbUser.subscriptions.filter((sub: any) => 
+               sub.status === 'active' && new Date(sub.endDate) > new Date()
+           );
+           
+           for (const sub of activeSubs) {
+               if (sub.packageId && sub.packageId.tools) {
+                   if (sub.packageId.tools.some((t: any) => t._id.toString() === id)) {
+                       hasAccess = true;
+                       break;
+                   }
+               }
+           }
+      }
+  }
+
+  if (!hasAccess) {
+      return (
+        <div className="flex-1 p-8 pt-6 flex items-center justify-center min-h-[50vh]">
+            <Card className="max-w-md w-full border-red-200">
+                <CardHeader className="text-center">
+                    <div className="mx-auto bg-red-100 p-3 rounded-full w-fit mb-4">
+                        <Lock className="w-8 h-8 text-red-500" />
+                    </div>
+                    <CardTitle className="text-red-700">Access Denied</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center space-y-4">
+                    <p className="text-muted-foreground">
+                        You do not have an active subscription for <strong>{tool.name}</strong>.
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                        <Link href="/dashboard">
+                            <Button variant="outline">Back to Dashboard</Button>
+                        </Link>
+                        <Link href="/premium-tools">
+                            <Button>Browse Packages</Button>
+                        </Link>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+      );
   }
 
   return (

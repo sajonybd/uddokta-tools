@@ -11,7 +11,10 @@ import {
   Users,
   ShieldAlert,
   FileText,
-  Package
+  Package,
+  ShoppingCart,
+  Ticket,
+  Banknote
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 
@@ -19,8 +22,6 @@ export function DashboardSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === 'admin' || session?.user?.email === "admin@example.com"; 
-  // Ideally rely strictly on role, but keeping email fallback for testing if role update isn't instant in DB/Session 
-  // for current user without re-login.
 
   const navItems = [
     {
@@ -50,6 +51,21 @@ export function DashboardSidebar() {
        title: "Admin Overview",
        href: "/admin",
        icon: ShieldAlert,
+    },
+    {
+       title: "Orders",
+       href: "/admin/orders",
+       icon: ShoppingCart,
+    },
+    {
+       title: "Coupons",
+       href: "/admin/coupons",
+       icon: Ticket,
+    },
+    {
+       title: "Exchange Rates",
+       href: "/admin/exchange-rates",
+       icon: Banknote,
     },
     {
       title: "Manage Tools",

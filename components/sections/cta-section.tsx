@@ -10,7 +10,7 @@ export function CTASection() {
         <div className="bg-gradient-to-r from-primary/20 via-accent/20 to-secondary/20 border border-primary/30 rounded-2xl p-12 text-center">
           <h2 className="text-4xl font-bold text-foreground mb-4">Ready to Get Started?</h2>
           <p className="text-foreground/70 text-lg mb-8">
-            Join thousands of professionals already using SEO Tools Pro to level up their business.
+            Join thousands of professionals already using Uddokta Tools to level up their business.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link

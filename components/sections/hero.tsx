@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { ArrowRight, Sparkles, Star } from "lucide-react"
+import Image from "next/image"
 
 export function Hero() {
   return (
@@ -38,14 +39,8 @@ export function Hero() {
               </Link>
             </div>
           </div>
-          <div className="relative h-96 md:h-full rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/10 border-2 border-primary/20 shadow-xl shadow-primary/20">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-7xl font-bold text-primary/30 mb-4 animate-pulse">🚀</div>
-                <p className="text-foreground/40 font-semibold text-lg">Premium Visual Experience</p>
-              </div>
-            </div>
+          <div className="relative h-[500px] md:h-full rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/10 border-2 border-primary/20 shadow-xl shadow-primary/20">
+            <Image src="/hero.jpeg" alt="Hero" fill className="object-cover" />
           </div>
         </div>
       </div>

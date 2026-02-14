@@ -28,8 +28,37 @@ const ToolSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'maintenance', 'inactive'],
+    enum: ['active', 'maintenance', 'inactive', 'down', 'stock_out'],
     default: 'active',
+  },
+  visibility: {
+    type: String,
+    enum: ['public', 'private'],
+    default: 'public',
+  },
+  available_slots: {
+    type: Number,
+    default: 0,
+  },
+  price: {
+    type: Number,
+    default: 0,
+  },
+  interval: {
+    type: String,
+    enum: ['monthly', 'yearly', 'lifetime'],
+    default: 'monthly',
+  },
+  packageId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Package',
+  },
+  max_slots: {
+    type: Number,
+    default: 0,
+  },
+  maintenance_message: {
+    type: String,
   },
   image: {
     type: String,
@@ -39,5 +68,18 @@ const ToolSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+// Fix for Next.js hot reload: ensure new fields are added to cached model
+if (mongoose.models.Tool) {
+    const schema = mongoose.models.Tool.schema;
+    if (!schema.path('price')) {
+        schema.add({ 
+            price: { type: Number, default: 0 },
+            interval: { type: String, enum: ['monthly', 'yearly', 'lifetime'], default: 'monthly' },
+            packageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Package' }
+        });
+        console.log("Hot-patched Tool schema with new fields");
+    }
+}
 
 export default mongoose.models.Tool || mongoose.model('Tool', ToolSchema);

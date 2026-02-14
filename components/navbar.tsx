@@ -1,35 +1,62 @@
 "use client"
 
+import { CartDrawer } from "@/components/cart-drawer";
 import { useState } from "react"
 import Link from "next/link"
 import { Menu, X } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
+import Image from "next/image"
+import { useCurrency } from "@/context/CurrencyContext"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const { data: session } = useSession()
+  const { currency, setCurrency } = useCurrency()
 
   return (
     <nav className="fixed top-0 w-full bg-background/95 backdrop-blur-md border-b-2 border-primary/10 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg group-hover:shadow-lg group-hover:shadow-primary/30 transition-all" />
-            <span className="font-bold text-lg text-foreground">SEO Tools Pro</span>
+            <Image src="/logo.png" alt="Logo" width={32} height={32} />
+            <span className="font-bold text-lg text-foreground">Uddokta Tools</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            <a href="#tools" className="text-foreground/70 hover:text-primary transition font-medium">
-              Tools
-            </a>
-            <a href="#pricing" className="text-foreground/70 hover:text-primary transition font-medium">
-              Pricing
-            </a>
-            <a href="#features" className="text-foreground/70 hover:text-primary transition font-medium">
-              Features
-            </a>
+            <Link href="/free-tools" className="text-foreground/70 hover:text-primary transition font-medium">
+              Free Tools
+            </Link>
+            <Link href="/premium-tools" className="text-foreground/70 hover:text-primary transition font-medium">
+              Premium Tools
+            </Link>
+            <Link href="/packages" className="text-foreground/70 hover:text-primary transition font-medium">
+              Packages
+            </Link>
+            
+            <Select value={currency} onValueChange={(val: any) => setCurrency(val)}>
+                <SelectTrigger className="w-[80px] h-9 border-primary/20 bg-background/50">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="BDT">🇧🇩 BDT</SelectItem>
+                    <SelectItem value="USD">🇺🇸 USD</SelectItem>
+                    <SelectItem value="INR">🇮🇳 INR</SelectItem>
+                    <SelectItem value="PKR">🇵🇰 PKR</SelectItem>
+                </SelectContent>
+            </Select>
+
+            <CartDrawer />
+
             {session ? (
                <div className="flex items-center gap-4">
+
                   <Link href="/dashboard" className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition font-medium">
                       Client Area
                   </Link>

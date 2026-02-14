@@ -69,7 +69,7 @@ export function Footer() {
           </div>
         </div>
         <div className="border-t border-border pt-8 flex justify-between items-center">
-          <p className="text-foreground/60 text-sm">© 2026 SEO Tools Pro. All rights reserved.</p>
+          <p className="text-foreground/60 text-sm">© 2026 Uddokta Tools. All rights reserved.</p>
           <div className="flex gap-4">
             <a href="#" className="text-foreground/60 hover:text-foreground text-sm">
               Twitter

@@ -1,212 +1,34 @@
 "use client";
 
+import { PackageForm } from "@/components/package-form";
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
+import { useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 export default function EditPackagePage() {
-  const router = useRouter();
-  const params = useParams();
-  const id = params?.id as string;
+    const { id } = useParams();
+    const [pkg, setPkg] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [pkg, setPkg] = useState<any>(null);
-  const [tools, setTools] = useState<any[]>([]);
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
-  const [isTrial, setIsTrial] = useState(false);
+    useEffect(() => {
+        if(id) {
+            fetch(`/api/packages/${id}`)
+                .then(res => res.json())
+                .then(data => {
+                    setPkg(data);
+                    setLoading(false);
+                })
+                .catch(err => console.error(err));
+        }
+    }, [id]);
 
-  useEffect(() => {
-    if (!id) return;
+    if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
+    if (!pkg) return <div>Package not found</div>;
 
-    Promise.all([
-        fetch(`/api/admin/packages/${id}`).then(res => res.json()),
-        fetch('/api/tools').then(res => res.json())
-    ]).then(([pkgData, toolsData]) => {
-        setPkg(pkgData);
-        setTools(toolsData);
-        setSelectedTools(pkgData.tools || []);
-        setIsTrial(pkgData.isTrial || false);
-        setLoading(false);
-    }).catch(err => {
-        console.error(err);
-        alert("Error fetching data");
-        router.push("/admin/packages");
-    });
-  }, [id, router]);
-
-  const handleToolToggle = (toolId: string) => {
-      setSelectedTools(prev => 
-          prev.includes(toolId) 
-            ? prev.filter(id => id !== toolId)
-            : [...prev, toolId]
-      );
-  };
-
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-
-    const formData = new FormData(event.currentTarget);
-    const featuresText = formData.get('features') as string;
-    const features = featuresText.split('\n').filter(line => line.trim() !== '');
-
-    const data = {
-        name: formData.get('name'),
-        price: Number(formData.get('price')),
-        interval: formData.get('interval'),
-        status: formData.get('status'),
-        stripePriceId: formData.get('stripePriceId'),
-        features: features,
-        tools: selectedTools,
-        isTrial: isTrial,
-        trialDurationDays: isTrial ? Number(formData.get('trialDurationDays')) : undefined
-    };
-
-    try {
-      const res = await fetch(`/api/admin/packages/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) throw new Error("Failed to update package");
-
-      router.push("/admin/packages");
-      router.refresh();
-    } catch (error) {
-      console.error(error);
-      alert("Something went wrong");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
-  if (!pkg) return <div>Package not found</div>;
-
-  return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-3xl font-bold tracking-tight">Edit Package: {pkg.name}</h2>
-      </div>
-
-      <form onSubmit={onSubmit} className="space-y-6 border p-6 rounded-lg bg-card">
-        <div className="space-y-2">
-          <Label htmlFor="name">Package Name</Label>
-          <Input id="name" name="name" defaultValue={pkg.name} required />
+    return (
+        <div className="space-y-6">
+            <h1 className="text-3xl font-bold">Edit Package</h1>
+            <PackageForm initialData={pkg} isEdit={true} />
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-                <Label htmlFor="price">Price ($)</Label>
-                <Input id="price" name="price" type="number" step="0.01" defaultValue={pkg.price} required />
-            </div>
-            
-            <div className="space-y-2">
-                <Label htmlFor="interval">Billing Interval</Label>
-                <Select name="interval" defaultValue={pkg.interval}>
-                    <SelectTrigger>
-                    <SelectValue placeholder="Select interval" />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="yearly">Yearly</SelectItem>
-                    <SelectItem value="lifetime">Lifetime</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="isTrial" 
-                checked={isTrial} 
-                onCheckedChange={(checked) => setIsTrial(checked as boolean)} 
-              />
-              <Label htmlFor="isTrial">Is this a Trial Package?</Label>
-          </div>
-          {isTrial && (
-              <div className="mt-2">
-                  <Label htmlFor="trialDurationDays">Trial Duration (Days)</Label>
-                  <Input 
-                    id="trialDurationDays" 
-                    name="trialDurationDays" 
-                    type="number" 
-                    defaultValue={pkg.trialDurationDays || 7} 
-                    className="max-w-[100px]" 
-                  />
-              </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="status">Status</Label>
-          <Select name="status" defaultValue={pkg.status}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Active (Visible)</SelectItem>
-              <SelectItem value="inactive">Inactive (Hidden)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-            <Label>Included Tools</Label>
-            <Card className="p-4 max-h-[200px] overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {tools.map(tool => (
-                    <div key={tool._id} className="flex items-center space-x-2">
-                        <Checkbox 
-                            id={`tool-${tool._id}`} 
-                            checked={selectedTools.includes(tool._id)}
-                            onCheckedChange={() => handleToolToggle(tool._id)}
-                        />
-                        <Label htmlFor={`tool-${tool._id}`} className="cursor-pointer text-sm font-normal">
-                            {tool.name}
-                        </Label>
-                    </div>
-                ))}
-            </Card>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="features">Features (Display Only - One per line)</Label>
-          <Textarea 
-            id="features" 
-            name="features" 
-            defaultValue={pkg.features.join('\n')}
-            className="min-h-[150px]"
-          />
-        </div>
-        
-        <div className="space-y-2">
-            <Label htmlFor="stripePriceId">Stripe Price ID (Optional)</Label>
-            <Input id="stripePriceId" name="stripePriceId" defaultValue={pkg.stripePriceId} />
-        </div>
-
-        <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
-            <Button type="submit" disabled={submitting}>
-            {submitting ? "Saving..." : "Update Package"}
-            </Button>
-        </div>
-      </form>
-    </div>
-  );
+    );
 }

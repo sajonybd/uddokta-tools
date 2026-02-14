@@ -4,10 +4,21 @@ import Tool from "@/models/Tool";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   await dbConnect();
+  const session = await getServerSession(authOptions);
+  const user = session?.user as any;
+  const isAdmin = user?.role === 'admin';
+
+  let query: any = { status: { $ne: 'inactive' } }; // Default: show everything except inactive
+
+  if (!isAdmin) {
+    query.visibility = 'public';
+    query.status = { $in: ['active', 'maintenance', 'down', 'stock_out'] };
+  }
+
   try {
-    const tools = await Tool.find({}).sort({ createdAt: -1 });
+    const tools = await Tool.find(query).sort({ createdAt: -1 });
     return NextResponse.json(tools);
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch tools" }, { status: 500 });
@@ -16,9 +27,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
+  const user = session?.user as any;
   
-  // TODO: Add proper role check. Assuming session existence is enough for MVP or check email
-  if (!session) {
+  if (user?.role !== 'admin') {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -54,7 +54,7 @@ export default function EditToolPage() {
     setSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
-    const data = Object.fromEntries(formData);
+    const data: any = Object.fromEntries(formData);
     
     // Handle linkedPage logic: if 'none', send null
     if (data.linkedPage === 'none') {
@@ -97,21 +97,41 @@ export default function EditToolPage() {
           <Input id="name" name="name" defaultValue={tool.name} required />
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="price">Price ($)</Label>
+                <Input type="number" id="price" name="price" defaultValue={tool.price} min="0" step="0.01" />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="interval">Billing Interval</Label>
+                <Select name="interval" defaultValue={tool.interval || "monthly"}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select interval" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="lifetime">Lifetime</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
+
         <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <Select name="category" defaultValue={tool.category}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="SEO">SEO</SelectItem>
-              <SelectItem value="Design">Design</SelectItem>
-              <SelectItem value="Writing">Writing</SelectItem>
-              <SelectItem value="AI">AI</SelectItem>
-              <SelectItem value="Video">Video</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
-            </SelectContent>
-          </Select>
+            <Label htmlFor="category">Category</Label>
+            <Select name="category" defaultValue={tool.category}>
+                <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="SEO">SEO</SelectItem>
+                <SelectItem value="Design">Design</SelectItem>
+                <SelectItem value="Writing">Writing</SelectItem>
+                <SelectItem value="AI">AI</SelectItem>
+                <SelectItem value="Video">Video</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+            </Select>
         </div>
 
         <div className="space-y-2">
@@ -123,11 +143,26 @@ export default function EditToolPage() {
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="maintenance">Maintenance</SelectItem>
+              <SelectItem value="down">Down</SelectItem>
+              <SelectItem value="stock_out">Stock Out</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        
+
+        <div className="space-y-2">
+          <Label htmlFor="visibility">Visibility</Label>
+          <Select name="visibility" defaultValue={tool.visibility || "public"}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select visibility" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="public">Public</SelectItem>
+              <SelectItem value="private">Private</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="space-y-2">
             <Label htmlFor="linkedPage">Linked Internal Page (Access Control Source)</Label>
             <Select 

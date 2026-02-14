@@ -35,6 +35,15 @@ const PackageSchema = new mongoose.Schema({
     enum: ['active', 'inactive'],
     default: 'active',
   },
+  visibility: {
+    type: String,
+    enum: ['public', 'private'],
+    default: 'public',
+  },
+  is_featured: {
+    type: Boolean,
+    default: false,
+  },
   stripePriceId: {
     type: String,
     required: false,

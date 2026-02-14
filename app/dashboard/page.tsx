@@ -19,6 +19,11 @@ interface Tool {
     category: string;
     status: "active" | "maintenance" | "inactive";
     url: string;
+    access?: {
+        status: 'active' | 'expired';
+        expiryDate?: string;
+        packageId?: string;
+    };
 }
 
 export default function DashboardPage() {
@@ -39,7 +44,12 @@ export default function DashboardPage() {
               const res = await fetch('/api/user/tools');
               if (res.ok) {
                   const data = await res.json();
-                  setTools(data);
+                  const sorted = data.sort((a: any, b: any) => {
+                      if (a.access?.status === 'active' && b.access?.status !== 'active') return -1;
+                      if (a.access?.status !== 'active' && b.access?.status === 'active') return 1;
+                      return 0;
+                  });
+                  setTools(sorted);
               }
           } catch (error) {
               console.error("Failed to fetch tools", error);
@@ -147,6 +157,7 @@ export default function DashboardPage() {
                             description={tool.description}
                             category={tool.category}
                             status={tool.status}
+                            access={tool.access}
                             icon={getIcon(tool.category)}
                             url={`/dashboard/tools/${tool._id}`}
                         />

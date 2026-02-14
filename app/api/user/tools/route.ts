@@ -20,9 +20,12 @@ export async function GET() {
       const allTools = await Tool.find({ status: 'active' }).sort({ createdAt: -1 });
       const user = session.user as any;
 
-      // Admin sees everything
+      // Admin sees everything as active
       if (user.role === 'admin') {
-          return NextResponse.json(allTools);
+          return NextResponse.json(allTools.map(t => ({
+              ...t.toObject(),
+              access: { status: 'active', expiryDate: null }
+          })));
       }
 
       // Filter for regular users
@@ -35,22 +38,61 @@ export async function GET() {
            return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
-      const accessibleToolIds = new Set<string>();
+      const toolAccess = new Map<string, { status: 'active' | 'expired', expiryDate: Date, packageId: string }>();
 
-      const activeSubs = dbUser.subscriptions.filter((sub: any) => {
-          return sub.status === 'active' && new Date(sub.endDate) > new Date();
-      });
+      if (dbUser.subscriptions) {
+        dbUser.subscriptions.forEach((sub: any) => {
+            if (!sub.packageId || !sub.packageId.tools) return;
+            
+            const isSubActive = sub.status === 'active' && new Date(sub.endDate) > new Date();
+            const subStatus = isSubActive ? 'active' : 'expired';
 
-      activeSubs.forEach((sub: any) => {
-          if (sub.packageId && sub.packageId.tools) {
-              sub.packageId.tools.forEach((t: any) => {
-                  accessibleToolIds.add(t._id.toString());
-              });
-          }
-      });
+            sub.packageId.tools.forEach((t: any) => {
+                const tid = t._id.toString();
+                const existing = toolAccess.get(tid);
 
-      const accessibleTools = allTools.filter(t => accessibleToolIds.has(t._id.toString()));
-      return NextResponse.json(accessibleTools);
+                // Priority: Active > Expired. 
+                // Within same status: Later Expiry > Earlier Expiry.
+
+                if (!existing) {
+                    toolAccess.set(tid, {
+                        status: subStatus,
+                        expiryDate: sub.endDate,
+                        packageId: sub.packageId._id
+                    });
+                } else {
+                    if (subStatus === 'active' && existing.status === 'expired') {
+                        // Upgrade to active
+                        toolAccess.set(tid, {
+                            status: 'active',
+                            expiryDate: sub.endDate,
+                            packageId: sub.packageId._id
+                        });
+                    } else if (subStatus === existing.status) {
+                        // Same status, take later expiry
+                        if (new Date(sub.endDate) > new Date(existing.expiryDate)) {
+                            toolAccess.set(tid, {
+                                status: subStatus,
+                                expiryDate: sub.endDate,
+                                packageId: sub.packageId._id
+                            });
+                        }
+                    }
+                    // If existing is active and new is expired, keep existing.
+                }
+            });
+        });
+      }
+
+      // Return tools user has history with, attached with access info
+      const userTools = allTools
+        .filter(t => toolAccess.has(t._id.toString()))
+        .map(t => ({
+            ...t.toObject(),
+            access: toolAccess.get(t._id.toString())
+        }));
+      
+      return NextResponse.json(userTools);
 
   } catch (error) {
     console.error(error);

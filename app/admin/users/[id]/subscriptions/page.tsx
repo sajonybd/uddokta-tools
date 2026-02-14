@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Calendar } from "lucide-react";
+import { Loader2, Calendar, Trash, Edit, X, Check } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
 export default function UserSubscriptionsPage() {
@@ -25,6 +26,10 @@ export default function UserSubscriptionsPage() {
   const [user, setUser] = useState<any>(null);
   const [packages, setPackages] = useState<any[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<string>("");
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState({ endDate: "", status: "" });
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -63,6 +68,7 @@ export default function UserSubscriptionsPage() {
           // Refresh user data
           const updatedUser = await res.json();
           setUser(updatedUser);
+          setSelectedPackage(""); 
           alert("Subscription assigned successfully");
       } catch (error) {
           alert("Error assigning subscription");
@@ -70,6 +76,46 @@ export default function UserSubscriptionsPage() {
           setAssigning(false);
       }
   };
+
+  const deleteSub = async (subId: string) => {
+      if(!confirm("Are you sure you want to delete this subscription?")) return;
+      setProcessing(true);
+      try {
+        const res = await fetch(`/api/admin/users/${id}/subscriptions`, {
+            method: 'DELETE',
+            body: JSON.stringify({ subId })
+        });
+        if(res.ok) {
+            const u = await res.json();
+            setUser(u);
+        }
+      } catch(e) { alert("Failed to delete"); }
+      setProcessing(false);
+  }
+
+  const startEdit = (sub: any) => {
+      setEditingId(sub._id);
+      setEditFormData({
+          endDate: sub.endDate ? new Date(sub.endDate).toISOString().split('T')[0] : "",
+          status: sub.status
+      });
+  }
+
+  const saveEdit = async (subId: string) => {
+      setProcessing(true);
+      try {
+        const res = await fetch(`/api/admin/users/${id}/subscriptions`, {
+            method: 'PATCH',
+            body: JSON.stringify({ subId, ...editFormData })
+        });
+        if(res.ok) {
+            const u = await res.json();
+            setUser(u);
+            setEditingId(null);
+        }
+      } catch(e) { alert("Failed to update"); }
+      setProcessing(false);
+  }
 
   if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
   if (!user) return <div>User not found</div>;
@@ -89,19 +135,74 @@ export default function UserSubscriptionsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                   {user.subscriptions && user.subscriptions.length > 0 ? (
-                      user.subscriptions.map((sub: any, idx: number) => (
-                          <div key={idx} className="border p-4 rounded-lg space-y-2">
-                              {/* Retrieve package details from populated field or just ID if fetch failed */}
-                              <div className="flex justify-between items-start">
-                                  <h4 className="font-semibold">{sub.packageId?.name || "Unknown Package"}</h4>
-                                  <Badge variant={sub.status === 'active' ? 'default' : 'destructive'}>
-                                      {sub.status}
-                                  </Badge>
-                              </div>
-                              <div className="text-sm text-muted-foreground flex items-center gap-2">
-                                  <Calendar className="h-3 w-3" />
-                                  Expires: {new Date(sub.endDate).toLocaleDateString()}
-                              </div>
+                      user.subscriptions.map((sub: any) => (
+                          <div key={sub._id} className="border p-4 rounded-lg space-y-3">
+                              {editingId === sub._id ? (
+                                  <div className="space-y-3">
+                                      <div className="font-semibold">{sub.packageId?.name || "Unknown Package"}</div>
+                                      <div className="space-y-1">
+                                          <Label>Expiry Date</Label>
+                                          <Input 
+                                            type="date" 
+                                            value={editFormData.endDate} 
+                                            onChange={e => setEditFormData({...editFormData, endDate: e.target.value})}
+                                          />
+                                      </div>
+                                      <div className="space-y-1">
+                                          <Label>Status</Label>
+                                          <Select 
+                                            value={editFormData.status} 
+                                            onValueChange={v => setEditFormData({...editFormData, status: v})}
+                                          >
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="active">Active</SelectItem>
+                                                <SelectItem value="expired">Expired</SelectItem>
+                                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                      </div>
+                                      <div className="flex gap-2 justify-end">
+                                          <Button size="sm" variant="outline" onClick={() => setEditingId(null)} disabled={processing}>
+                                              <X className="w-4 h-4 mr-1" /> Cancel
+                                          </Button>
+                                          <Button size="sm" onClick={() => saveEdit(sub._id)} disabled={processing}>
+                                              <Check className="w-4 h-4 mr-1" /> Save
+                                          </Button>
+                                      </div>
+                                  </div>
+                              ) : (
+                                  <>
+                                    <div className="flex justify-between items-start">
+                                        <h4 className="font-semibold">{sub.packageId?.name || "Unknown Package"}</h4>
+                                        <div className="flex items-center gap-1">
+                                            {(() => {
+                                                const isExpired = new Date(sub.endDate) < new Date();
+                                                const displayStatus = isExpired && sub.status === 'active' ? 'expired' : sub.status;
+                                                return (
+                                                    <Badge variant={displayStatus === 'active' ? 'default' : 'destructive'}>
+                                                        {displayStatus}
+                                                    </Badge>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                    <div className="text-sm text-muted-foreground flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="h-3 w-3" />
+                                            Expires: {new Date(sub.endDate).toLocaleDateString()}
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(sub)}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-600" onClick={() => deleteSub(sub._id)}>
+                                                <Trash className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                  </>
+                              )}
                           </div>
                       ))
                   ) : (

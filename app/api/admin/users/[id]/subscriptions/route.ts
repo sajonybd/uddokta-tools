@@ -82,3 +82,59 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     
     return NextResponse.json(user);
 }
+
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user as any).role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = params;
+  const body = await req.json();
+  const { subId } = body;
+
+  await dbConnect();
+  try {
+      // Pull (remove) the subscription with the matching subId
+      const user = await User.findByIdAndUpdate(
+          id,
+          { $pull: { subscriptions: { _id: subId } } },
+          { new: true }
+      );
+     return NextResponse.json(user);
+  } catch(e) {
+      return NextResponse.json({ error: "Failed to delete subscription" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user as any).role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  
+  const { id } = params;
+  const body = await req.json();
+  const { subId, endDate, status } = body;
+
+  await dbConnect();
+  try {
+        // Update specific subscription field
+        const user = await User.findOneAndUpdate(
+            { _id: id, "subscriptions._id": subId },
+            { 
+                $set: { 
+                    "subscriptions.$.endDate": new Date(endDate),
+                    "subscriptions.$.status": status
+                }
+            },
+            { new: true }
+        );
+        return NextResponse.json(user);
+  } catch (e) {
+      console.error(e);
+      return NextResponse.json({ error: "Failed to update subscription" }, { status: 500 });
+  }
+}
