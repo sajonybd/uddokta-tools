@@ -2,10 +2,32 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Order from "@/models/Order";
 import Package from "@/models/Package";
+import Tool from "@/models/Tool";
 import Coupon from "@/models/Coupon";
-import User from "@/models/User"; // Import User to update subscription
+import Subscription from "@/models/Subscription";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+
+export async function GET(req: Request) {
+  await dbConnect();
+  const session = await getServerSession(authOptions);
+  
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  
+  const user = session.user as any;
+
+  try {
+    const orders = await Order.find({ user: user.id })
+      .populate('items.package')
+      .populate('couponApplied')
+      .sort({ createdAt: -1 });
+    return NextResponse.json(orders);
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   await dbConnect();
@@ -26,13 +48,29 @@ export async function POST(req: Request) {
     const finalItems = [];
 
     for (const item of items) {
-        const pkg = await Package.findById(item._id);
-        if (!pkg) continue;
-        const price = pkg.price;
-        totalAmount += price;
+        // Try Package first
+        let targetItem = await Package.findById(item._id);
+        let itemType = 'Package';
+        
+        if (!targetItem) {
+            // Try Tool if Package not found
+            targetItem = await Tool.findById(item._id);
+            itemType = 'Tool';
+        }
+
+        if (!targetItem) continue;
+
+        const durationMonths = item.durationMonths || 1;
+        const pricePerMonth = targetItem.price;
+        const subtotal = pricePerMonth * durationMonths;
+        
+        totalAmount += subtotal;
         finalItems.push({
-            package: pkg._id,
-            price: price
+            package: targetItem._id, 
+            itemType: itemType,
+            durationMonths: durationMonths,
+            name: item.name || targetItem.name,
+            price: pricePerMonth // Store per-month price for record
         });
     }
 
@@ -82,27 +120,62 @@ export async function POST(req: Request) {
 
     // 5. If Approved (Free), Activate Subscription Immediately
     if (status === 'approved') {
-        // Logic to update User Subscription
-        const dbUser = await User.findById(user.id);
-        
-        // Loop through items and add subscriptions
-        // Helper function or inline logic
         for (const item of finalItems) {
-             const pkg = await Package.findById(item.package);
-             const durationDays = pkg.isTrial ? pkg.trialDurationDays : (pkg.interval === 'yearly' ? 365 : 30); // simplistic logic
-             const startDate = new Date();
-             const endDate = new Date();
-             endDate.setDate(startDate.getDate() + (durationDays || 30));
+             const targetItem = item.itemType === 'Tool' 
+                ? await Tool.findById(item.package)
+                : await Package.findById(item.package);
 
-             dbUser.subscriptions.push({
-                 packageId: pkg._id,
-                 startDate,
-                 endDate,
-                 status: 'active',
-                 autoRenew: false // Default
-             });
+             if (!targetItem) continue;
+
+             // Calculate duration
+             let durationDays = 30; // Default base
+             
+             if (targetItem.interval === 'lifetime') {
+                 durationDays = 36500; // 100 years
+             } else if (targetItem.interval === 'yearly') {
+                 durationDays = 365 * (item.durationMonths || 1); // Respect year multipliers if any
+             } else if (targetItem.isTrial && (targetItem as any).trialDurationDays) {
+                 durationDays = (targetItem as any).trialDurationDays;
+             } else if (targetItem.isTrial || targetItem.price === 0) {
+                 durationDays = 365; // User requested year instead of month for free tools
+             } else {
+                 // Monthly (default)
+                 durationDays = 30 * (item.durationMonths || 1);
+             }
+
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setDate(startDate.getDate() + durationDays);
+
+            // Check if user already has an active subscription for this package in dedicated collection
+            const existingSub = await Subscription.findOne({
+                user: user.id,
+                packageId: targetItem._id,
+                status: 'active'
+            });
+
+            if (existingSub) {
+                // Extend existing subscription
+                const currentEnd = new Date(existingSub.endDate);
+                const extendFrom = currentEnd > startDate ? currentEnd : startDate;
+                const newEnd = new Date(extendFrom);
+                newEnd.setDate(newEnd.getDate() + durationDays);
+                existingSub.endDate = newEnd;
+                existingSub.orderId = order._id;
+                await existingSub.save();
+            } else {
+                // Create new subscription in dedicated collection
+                await Subscription.create({
+                    user: user.id,
+                    packageId: targetItem._id,
+                    itemType: item.itemType,
+                    startDate,
+                    endDate,
+                    status: 'active',
+                    orderId: order._id
+                });
+            }
         }
-        await dbUser.save();
     }
 
     return NextResponse.json({ success: true, orderId: order._id, status }, { status: 201 });

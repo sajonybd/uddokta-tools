@@ -9,6 +9,7 @@ interface CartItem {
   price: number;
   type: 'package';
   image?: string;
+  duration?: number; // Added for duration selection
 }
 
 interface CartContextType {
@@ -25,6 +26,7 @@ interface CartContextType {
   finalTotal: number;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
+  updateDuration: (id: string, months: number) => void; // Added
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -57,14 +59,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
 
   const addToCart = (item: CartItem, openDrawer: boolean = true) => {
-    if (items.some((i) => i._id === item._id)) {
-      toast.info("Item already in cart");
-      if (openDrawer) setIsCartOpen(true);
+    const existingIndex = items.findIndex((i) => i._id === item._id);
+    
+    if (existingIndex > -1) {
+      setItems((prev) => prev.map((i, idx) => 
+        idx === existingIndex ? { ...i, duration: (i.duration || 1) + 1 } : i
+      ));
+      toast.success(`Extended ${item.name} duration`);
+      if (openDrawer && !isCartOpen) setIsCartOpen(true);
       return;
     }
-    setItems((prev) => [...prev, item]);
+    
+    setItems((prev) => [...prev, { ...item, duration: 1 }]); // Default to 1 month
     toast.success("Added to cart");
-    if (openDrawer) setIsCartOpen(true);
+    if (openDrawer && !isCartOpen) setIsCartOpen(true);
+  };
+
+  const updateDuration = (id: string, months: number) => {
+    setItems((prev) => prev.map(item => 
+        item._id === id ? { ...item, duration: months } : item
+    ));
   };
 
   const removeFromCart = (id: string) => {
@@ -105,7 +119,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setDiscountAmount(discount);
   };
 
-  const cartTotal = items.reduce((sum, item) => sum + item.price, 0);
+  const cartTotal = items.reduce((sum, item) => sum + (item.price * (item.duration || 1)), 0);
   const finalTotal = Math.max(0, cartTotal - discountAmount);
 
   return (
@@ -124,6 +138,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         finalTotal,
         isCartOpen,
         setIsCartOpen,
+        updateDuration,
       }}
     >
       {children}

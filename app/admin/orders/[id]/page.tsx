@@ -127,7 +127,7 @@ export default function AdminOrderDetailsPage() {
                     <div className="space-y-2">
                         {order.items?.map((item: any, i: number) => (
                             <div key={i} className="flex justify-between border-b pb-2 last:border-0">
-                                <span>{item.package?.name || "Unknown Package"}</span>
+                                <span>{item.name || item.package?.name || "Unknown Item"}</span>
                                 <span>${item.price}</span>
                             </div>
                         ))}

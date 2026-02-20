@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PriceDisplay } from "./price-display";
+import { Badge } from "@/components/ui/badge"; // Assuming Badge is available or needs to be imported
 
 export function CartDrawer() {
   const {
@@ -57,7 +58,7 @@ export function CartDrawer() {
   }
 
   return (
-    <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
+    <Sheet open={isCartOpen} onOpenChange={setIsCartOpen} modal={false}>
       <SheetTrigger asChild>
         <Button variant="outline" size="icon" className="relative">
           <ShoppingCart className="h-4 w-4" />
@@ -68,7 +69,12 @@ export function CartDrawer() {
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent className="flex flex-col h-full w-full sm:max-w-md">
+      <SheetContent 
+        className="flex flex-col h-full w-full sm:max-w-md" 
+        hideOverlay={true}
+        onInteractOutside={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <SheetHeader>
           <SheetTitle>Your Cart ({items.length})</SheetTitle>
         </SheetHeader>
@@ -90,8 +96,17 @@ export function CartDrawer() {
                      <span className="text-xs font-bold text-primary">PKG</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm truncate">{item.name}</h4>
-                    <p className="text-sm text-muted-foreground"><PriceDisplay amount={item.price} /></p>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-sm truncate">{item.name}</h4>
+                      {item.duration && item.duration > 1 && (
+                        <Badge variant="secondary" className="px-1.5 py-0 text-[10px] h-4">
+                          {item.duration} Mo
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      <PriceDisplay amount={item.price * (item.duration || 1)} />
+                    </p>
                   </div>
                   <Button
                     variant="ghost"

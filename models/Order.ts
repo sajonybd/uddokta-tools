@@ -9,7 +9,22 @@ const OrderSchema = new mongoose.Schema({
   items: [{
     package: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Package',
+      refPath: 'items.itemType',
+      required: true,
+    },
+    itemType: {
+        type: String,
+        enum: ['Package', 'Tool'],
+        default: 'Package',
+        required: true,
+    },
+    durationMonths: {
+        type: Number,
+        default: 1,
+        required: true,
+    },
+    name: {
+      type: String,
       required: true,
     },
     price: {
@@ -55,5 +70,17 @@ const OrderSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+// Fix for Next.js hot reload: ensure new fields are added to cached model
+if (mongoose.models.Order) {
+    const schema = mongoose.models.Order.schema;
+    const itemsPath = schema.path('items') as any;
+    if (itemsPath && itemsPath.schema && !itemsPath.schema.path('name')) {
+        itemsPath.schema.add({
+            name: { type: String, required: true }
+        });
+        console.log("Hot-patched Order items schema with name field");
+    }
+}
 
 export default mongoose.models.Order || mongoose.model('Order', OrderSchema);

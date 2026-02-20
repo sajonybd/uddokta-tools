@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Tool from "@/models/Tool";
 import User from "@/models/User";
+import Package from "@/models/Package";
+import Subscription from "@/models/Subscription";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -19,6 +21,8 @@ export async function GET() {
   try {
       const allTools = await Tool.find({ status: 'active' }).sort({ createdAt: -1 });
       const user = session.user as any;
+      const userId = user.id || user._id;
+      console.log("Tools API: User Details:", { userId, role: user.role });
 
       // Admin sees everything as active
       if (user.role === 'admin') {
@@ -28,57 +32,61 @@ export async function GET() {
           })));
       }
 
-      // Filter for regular users
-      const dbUser = await User.findById(user.id).populate({
-          path: 'subscriptions.packageId',
-          populate: { path: 'tools' }
-      });
-
-      if (!dbUser) {
-           return NextResponse.json({ error: "User not found" }, { status: 404 });
-      }
-
       const toolAccess = new Map<string, { status: 'active' | 'expired', expiryDate: Date, packageId: string }>();
 
-      if (dbUser.subscriptions) {
-        dbUser.subscriptions.forEach((sub: any) => {
-            if (!sub.packageId || !sub.packageId.tools) return;
+      // Fetch all subscriptions for the user from dedicated collection
+      const userSubscriptions = await Subscription.find({ 
+          user: userId 
+      }).populate({
+          path: 'packageId',
+          strictPopulate: false,
+          populate: { 
+              path: 'tools',
+              strictPopulate: false
+          }
+      });
+
+      if (userSubscriptions && userSubscriptions.length > 0) {
+        userSubscriptions.forEach((sub: any) => {
+            if (!sub.packageId) return;
             
             const isSubActive = sub.status === 'active' && new Date(sub.endDate) > new Date();
             const subStatus = isSubActive ? 'active' : 'expired';
 
-            sub.packageId.tools.forEach((t: any) => {
-                const tid = t._id.toString();
-                const existing = toolAccess.get(tid);
+            // Determine which tools are granted by this subscription
+            let toolsToProcess: any[] = [];
+            if (sub.itemType === 'Package' && sub.packageId.tools) {
+                toolsToProcess = sub.packageId.tools;
+            } else if (sub.itemType === 'Tool') {
+                toolsToProcess = [sub.packageId];
+            }
 
-                // Priority: Active > Expired. 
-                // Within same status: Later Expiry > Earlier Expiry.
+            toolsToProcess.forEach((t: any) => {
+                const tid = t._id?.toString() || t.toString();
+                const existing = toolAccess.get(tid);
 
                 if (!existing) {
                     toolAccess.set(tid, {
                         status: subStatus,
                         expiryDate: sub.endDate,
-                        packageId: sub.packageId._id
+                        packageId: sub.packageId._id || sub.packageId
                     });
                 } else {
                     if (subStatus === 'active' && existing.status === 'expired') {
-                        // Upgrade to active
                         toolAccess.set(tid, {
                             status: 'active',
                             expiryDate: sub.endDate,
-                            packageId: sub.packageId._id
+                            packageId: sub.packageId._id || sub.packageId
                         });
                     } else if (subStatus === existing.status) {
-                        // Same status, take later expiry
                         if (new Date(sub.endDate) > new Date(existing.expiryDate)) {
                             toolAccess.set(tid, {
                                 status: subStatus,
                                 expiryDate: sub.endDate,
-                                packageId: sub.packageId._id
+                                packageId: sub.packageId._id || sub.packageId
                             });
                         }
                     }
-                    // If existing is active and new is expired, keep existing.
                 }
             });
         });
@@ -94,8 +102,8 @@ export async function GET() {
       
       return NextResponse.json(userTools);
 
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Fetch failed" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Tools API Error:", error);
+    return NextResponse.json({ error: error.message || "Fetch failed" }, { status: 500 });
   }
 }

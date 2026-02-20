@@ -57,11 +57,14 @@ export function Navbar() {
             {session ? (
                <div className="flex items-center gap-4">
 
-                  <Link href="/dashboard" className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition font-medium">
-                      Client Area
-                  </Link>
-                  <span className="text-sm font-medium hidden lg:inline-block">{session.user?.name}</span>
-               </div>
+                   <Link href="/dashboard" className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition font-medium">
+                       Client Area
+                   </Link>
+                   <div className="flex flex-col items-end">
+                      <span className="text-sm font-bold text-primary leading-tight">UID: {(session.user as any).customId || '....'}</span>
+                      <span className="text-xs font-medium text-foreground/70 hidden lg:inline-block leading-tight">{session.user?.name}</span>
+                   </div>
+                </div>
             ) : (
                 <>
                     <Link href="/login" className="text-foreground/70 hover:text-primary transition font-medium">
@@ -99,8 +102,11 @@ export function Navbar() {
                     <Link href="/dashboard" className="block w-full px-6 py-2 bg-primary/10 text-primary rounded-lg text-center font-medium">
                         Client Area
                     </Link>
-                    <div className="px-3 py-2 text-sm font-medium text-foreground/70">
-                        Signed in as {session.user?.name}
+                    <div className="px-3 py-2 space-y-0.5">
+                        <div className="text-xs font-bold text-primary">UID: {(session.user as any).customId || '....'}</div>
+                        <div className="text-sm font-medium text-foreground/70">
+                            Signed in as {session.user?.name}
+                        </div>
                     </div>
                      {/* Logout already available in dashboard, but we can keep it here or remove */}
                  </>

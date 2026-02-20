@@ -65,11 +65,15 @@ export const authOptions: AuthOptions = {
               }
           } else if (user.email) {
             // Create new user
+            const { getNextUserId } = await import("@/lib/user-utils");
+            const customId = await getNextUserId();
+
             await User.create({
               name: user.name,
               email: user.email,
               image: user.image,
               provider: "google",
+              customId,
             });
           }
           return true;
@@ -84,6 +88,7 @@ export const authOptions: AuthOptions = {
         if (session.user) {
             (session.user as any).role = token.role;
             (session.user as any).id = token.id;
+            (session.user as any).customId = token.customId;
         }
         return session;
     },
@@ -98,9 +103,18 @@ export const authOptions: AuthOptions = {
            if (token.email) {
                 const dbUser = await User.findOne({ email: token.email });
                 if (dbUser) {
+                    // Retroactive ID assignment if missing
+                    if (!dbUser.customId) {
+                        const { getNextUserId } = await import("@/lib/user-utils");
+                        dbUser.customId = await getNextUserId();
+                        await dbUser.save();
+                        console.log(`Retroactively assigned UID ${dbUser.customId} to ${dbUser.email}`);
+                    }
+
                     token.role = dbUser.role;
                     token.id = dbUser._id.toString();
                     token.status = dbUser.status;
+                    token.customId = dbUser.customId;
                 }
            }
         }

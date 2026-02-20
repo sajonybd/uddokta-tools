@@ -21,15 +21,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Edit, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminCouponsPage() {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Create State
+  // Create/Edit State
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentCouponId, setCurrentCouponId] = useState<string | null>(null);
   const [newCoupon, setNewCoupon] = useState({
       code: "",
       discountType: "percentage",
@@ -49,7 +51,6 @@ export default function AdminCouponsPage() {
 
   const fetchCoupons = async () => {
     try {
-      const res = await fetch("/api/tools"); // Mistake? Oh wait, Coupons API is in /api/coupons
       const resC = await fetch("/api/coupons");
       const data = await resC.json();
       if (resC.ok) {
@@ -62,10 +63,68 @@ export default function AdminCouponsPage() {
     }
   };
 
-  const createCoupon = async () => {
+  const resetForm = () => {
+    setNewCoupon({
+        code: "",
+        discountType: "percentage",
+        discountAmount: 0,
+        expirationDate: "",
+        usageLimit: "",
+        status: "active",
+        rules: {
+            userType: "all",
+            minOrderValue: 0
+        }
+    });
+    setIsEditing(false);
+    setCurrentCouponId(null);
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) resetForm();
+    setIsOpen(open);
+  };
+
+  const handleEdit = (coupon: any) => {
+    setNewCoupon({
+        code: coupon.code,
+        discountType: coupon.discountType,
+        discountAmount: coupon.discountAmount,
+        expirationDate: coupon.expirationDate ? new Date(coupon.expirationDate).toISOString().split('T')[0] : "",
+        usageLimit: coupon.usageLimit || "",
+        status: coupon.status,
+        rules: {
+            userType: coupon.rules?.userType || "all",
+            minOrderValue: coupon.rules?.minOrderValue || 0
+        }
+    });
+    setIsEditing(true);
+    setCurrentCouponId(coupon._id);
+    setIsOpen(true);
+  };
+
+  const deleteCoupon = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this coupon?")) return;
+    try {
+        const res = await fetch(`/api/coupons/${id}`, { method: "DELETE" });
+        if (res.ok) {
+            toast.success("Coupon deleted");
+            fetchCoupons();
+        } else {
+            toast.error("Failed to delete");
+        }
+    } catch (e) {
+        toast.error("Error deleting coupon");
+    }
+  };
+
+  const saveCoupon = async () => {
       try {
-          const res = await fetch("/api/coupons", {
-              method: "POST",
+          const url = isEditing ? `/api/coupons/${currentCouponId}` : "/api/coupons";
+          const method = isEditing ? "PATCH" : "POST";
+          
+          const res = await fetch(url, {
+              method,
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                   ...newCoupon,
@@ -73,14 +132,15 @@ export default function AdminCouponsPage() {
               })
           });
           if(res.ok) {
-              toast.success("Coupon created");
+              toast.success(isEditing ? "Coupon updated" : "Coupon created");
               setIsOpen(false);
+              resetForm();
               fetchCoupons();
           } else {
-              toast.error("Failed to create");
+              toast.error(isEditing ? "Failed to update" : "Failed to create");
           }
       } catch(e) {
-          toast.error("Error creating coupon");
+          toast.error("Error saving coupon");
       }
   }
 
@@ -90,13 +150,13 @@ export default function AdminCouponsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Coupons</h1>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button><Plus size={16} className="mr-2" /> Create Coupon</Button>
+                <Button onClick={() => { setIsEditing(false); resetForm(); }}><Plus size={16} className="mr-2" /> Create Coupon</Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Create New Coupon</DialogTitle>
+                    <DialogTitle>{isEditing ? "Edit Coupon" : "Create New Coupon"}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -131,9 +191,15 @@ export default function AdminCouponsPage() {
                              <Input type="number" value={newCoupon.discountAmount} onChange={e => setNewCoupon({...newCoupon, discountAmount: Number(e.target.value)})} />
                          </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label>Expiration Date</Label>
-                        <Input type="date" value={newCoupon.expirationDate} onChange={e => setNewCoupon({...newCoupon, expirationDate: e.target.value})} />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Expiration Date</Label>
+                            <Input type="date" value={newCoupon.expirationDate} onChange={e => setNewCoupon({...newCoupon, expirationDate: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Usage Limit</Label>
+                            <Input type="number" value={newCoupon.usageLimit} onChange={e => setNewCoupon({...newCoupon, usageLimit: e.target.value})} placeholder="∞" />
+                        </div>
                     </div>
                     
                     <div className="space-y-2">
@@ -149,7 +215,7 @@ export default function AdminCouponsPage() {
                          </Select>
                     </div>
 
-                    <Button className="w-full" onClick={createCoupon}>Create Coupon</Button>
+                    <Button className="w-full" onClick={saveCoupon}>{isEditing ? "Update Coupon" : "Create Coupon"}</Button>
                 </div>
             </DialogContent>
         </Dialog>
@@ -165,6 +231,7 @@ export default function AdminCouponsPage() {
               <TableHead>Used</TableHead>
               <TableHead>Expires</TableHead>
               <TableHead>Rule</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -176,6 +243,16 @@ export default function AdminCouponsPage() {
                 <TableCell>{coupon.usedCount} / {coupon.usageLimit || '∞'}</TableCell>
                 <TableCell>{new Date(coupon.expirationDate).toLocaleDateString()}</TableCell>
                 <TableCell className="capitalize">{coupon.rules?.userType}</TableCell>
+                <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(coupon)}>
+                            <Edit size={16} />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteCoupon(coupon._id)}>
+                            <Trash2 size={16} />
+                        </Button>
+                    </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

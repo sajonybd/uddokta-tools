@@ -103,6 +103,26 @@ export default function NewToolPage() {
           </Select>
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="price">Price ($)</Label>
+                <Input type="number" id="price" name="price" defaultValue="0" min="0" step="0.01" />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="interval">Billing Interval</Label>
+                <Select name="interval" defaultValue="monthly">
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select interval" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="lifetime">Lifetime</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
           <Select name="status" defaultValue="active">
@@ -112,7 +132,22 @@ export default function NewToolPage() {
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="maintenance">Maintenance</SelectItem>
+              <SelectItem value="down">Down</SelectItem>
+              <SelectItem value="stock_out">Stock Out</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="visibility">Visibility</Label>
+          <Select name="visibility" defaultValue="public">
+            <SelectTrigger>
+              <SelectValue placeholder="Select visibility" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="public">Public</SelectItem>
+              <SelectItem value="private">Private</SelectItem>
             </SelectContent>
           </Select>
         </div>

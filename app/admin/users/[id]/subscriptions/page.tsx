@@ -25,7 +25,10 @@ export default function UserSubscriptionsPage() {
   const [assigning, setAssigning] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [packages, setPackages] = useState<any[]>([]);
-  const [selectedPackage, setSelectedPackage] = useState<string>("");
+  const [tools, setTools] = useState<any[]>([]);
+  const [selectedType, setSelectedType] = useState<'Package' | 'Tool'>("Package");
+  const [selectedItem, setSelectedItem] = useState<string>("");
+  const [selectedDuration, setSelectedDuration] = useState<string>("30");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState({ endDate: "", status: "" });
@@ -36,10 +39,12 @@ export default function UserSubscriptionsPage() {
 
     Promise.all([
         fetch(`/api/admin/users/${id}/subscriptions`).then(res => res.json()),
-        fetch('/api/admin/packages').then(res => res.json())
-    ]).then(([userData, packagesData]) => {
+        fetch('/api/admin/packages').then(res => res.json()),
+        fetch('/api/admin/tools').then(res => res.json())
+    ]).then(([userData, packagesData, toolsData]) => {
         setUser(userData);
         setPackages(packagesData);
+        setTools(toolsData);
         setLoading(false);
     }).catch(err => {
         console.error(err);
@@ -48,27 +53,26 @@ export default function UserSubscriptionsPage() {
   }, [id]);
 
   const handleAssign = async () => {
-      if (!selectedPackage) return;
+      if (!selectedItem) return;
       setAssigning(true);
-      
-      const pkg = packages.find(p => p._id === selectedPackage);
       
       try {
           const res = await fetch(`/api/admin/users/${id}/subscriptions`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                  packageId: selectedPackage,
-                  isTrial: pkg?.isTrial
+                  packageId: selectedItem,
+                  itemType: selectedType,
+                  durationDays: selectedDuration
               })
           });
           
           if (!res.ok) throw new Error("Failed to assign");
           
-          // Refresh user data
           const updatedUser = await res.json();
           setUser(updatedUser);
-          setSelectedPackage(""); 
+          setSelectedItem(""); 
+          setSelectedDuration("30");
           alert("Subscription assigned successfully");
       } catch (error) {
           alert("Error assigning subscription");
@@ -139,7 +143,10 @@ export default function UserSubscriptionsPage() {
                           <div key={sub._id} className="border p-4 rounded-lg space-y-3">
                               {editingId === sub._id ? (
                                   <div className="space-y-3">
-                                      <div className="font-semibold">{sub.packageId?.name || "Unknown Package"}</div>
+                                      <div className="font-semibold">
+                                          <Badge variant="outline" className="mr-2">{sub.itemType}</Badge>
+                                          {sub.packageId?.name || "Unknown Item"}
+                                      </div>
                                       <div className="space-y-1">
                                           <Label>Expiry Date</Label>
                                           <Input 
@@ -171,10 +178,15 @@ export default function UserSubscriptionsPage() {
                                           </Button>
                                       </div>
                                   </div>
-                              ) : (
+                                ) : (
                                   <>
                                     <div className="flex justify-between items-start">
-                                        <h4 className="font-semibold">{sub.packageId?.name || "Unknown Package"}</h4>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="text-[10px] h-4">{sub.itemType}</Badge>
+                                                <h4 className="font-semibold">{sub.packageId?.name || "Unknown Item"}</h4>
+                                            </div>
+                                        </div>
                                         <div className="flex items-center gap-1">
                                             {(() => {
                                                 const isExpired = new Date(sub.endDate) < new Date();
@@ -214,25 +226,59 @@ export default function UserSubscriptionsPage() {
           {/* Assign New Subscription */}
           <Card>
               <CardHeader>
-                  <CardTitle>Assign New Package</CardTitle>
+                  <CardTitle>Assign New Subscription</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                   <div className="space-y-2">
-                      <Label>Select Package</Label>
-                      <Select onValueChange={setSelectedPackage} value={selectedPackage}>
+                      <Label>Item Type</Label>
+                      <Select value={selectedType} onValueChange={(v: any) => {
+                          setSelectedType(v);
+                          setSelectedItem("");
+                      }}>
                           <SelectTrigger>
-                              <SelectValue placeholder="Select a package" />
+                              <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                              {packages.map(pkg => (
-                                  <SelectItem key={pkg._id} value={pkg._id}>
-                                      {pkg.name} ({pkg.isTrial ? 'Trial' : `$${pkg.price}`})
+                              <SelectItem value="Package">Package</SelectItem>
+                              <SelectItem value="Tool">Individual Tool</SelectItem>
+                          </SelectContent>
+                      </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                      <Label>Select {selectedType}</Label>
+                      <Select onValueChange={setSelectedItem} value={selectedItem}>
+                          <SelectTrigger>
+                              <SelectValue placeholder={`Select a ${selectedType.toLowerCase()}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                              {(selectedType === 'Package' ? packages : tools).map(item => (
+                                  <SelectItem key={item._id} value={item._id}>
+                                      {item.name} ({item.isTrial ? 'Trial' : `$${item.price}`})
                                   </SelectItem>
                               ))}
                           </SelectContent>
                       </Select>
                   </div>
-                  <Button onClick={handleAssign} disabled={assigning || !selectedPackage} className="w-full">
+
+                  <div className="space-y-2">
+                       <Label>Duration</Label>
+                       <Select onValueChange={setSelectedDuration} value={selectedDuration}>
+                           <SelectTrigger>
+                               <SelectValue placeholder="Select duration" />
+                           </SelectTrigger>
+                           <SelectContent>
+                               <SelectItem value="30">1 Month</SelectItem>
+                               <SelectItem value="90">3 Months</SelectItem>
+                               <SelectItem value="180">6 Months</SelectItem>
+                               <SelectItem value="365">1 Year</SelectItem>
+                               <SelectItem value="730">2 Years</SelectItem>
+                               <SelectItem value="36500">Lifetime</SelectItem>
+                           </SelectContent>
+                       </Select>
+                  </div>
+
+                  <Button onClick={handleAssign} disabled={assigning || !selectedItem} className="w-full">
                       {assigning ? "Assigning..." : "Assign Subscription"}
                   </Button>
               </CardContent>

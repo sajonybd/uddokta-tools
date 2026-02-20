@@ -26,12 +26,15 @@ export async function POST(req: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const { getNextUserId } = await import("@/lib/user-utils");
+    const customId = await getNextUserId();
 
     await User.create({
       name,
       email,
       password: hashedPassword,
       provider: "credentials",
+      customId,
     });
 
     return NextResponse.json(

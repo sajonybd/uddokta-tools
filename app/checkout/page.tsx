@@ -8,7 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Trash2, ShoppingBag, Banknote, CreditCard, Loader2 } from "lucide-react";
+import { Trash2, ShoppingBag, Banknote, CreditCard, Loader2, Calendar } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Image from "next/image";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -17,14 +24,39 @@ import Link from "next/link";
 import { PriceDisplay } from "@/components/price-display";
 
 export default function CheckoutPage() {
-  const { items, removeFromCart, cartTotal, discountAmount, finalTotal, clearCart, coupon } = useCart();
+  const { items, removeFromCart, cartTotal, discountAmount, finalTotal, clearCart, coupon, updateDuration } = useCart();
   const { data: session } = useSession();
   const router = useRouter();
   
   const [loading, setLoading] = useState(false);
   const [paymentProof, setPaymentProof] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const { applyCoupon, removeCoupon } = useCart();
   // In a real app, this would be a file upload logic that returns a URL
   // For MVP, letting user paste a URL or transaction ID
+
+  const handleApplyCoupon = async () => {
+       if (!couponCode) return;
+       setApplyingCoupon(true);
+       try {
+           const res = await fetch("/api/coupons/validate", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({ code: couponCode, items })
+           });
+           const data = await res.json();
+           if (!res.ok) throw new Error(data.error || "Invalid coupon");
+           
+           applyCoupon(data.coupon);
+           setCouponCode("");
+           toast.success("Coupon applied successfully");
+       } catch (error: any) {
+           toast.error(error.message);
+       } finally {
+           setApplyingCoupon(false);
+       }
+  };
 
   const handlePlaceOrder = async () => {
        if (!session) {
@@ -44,7 +76,10 @@ export default function CheckoutPage() {
                method: "POST",
                headers: { "Content-Type": "application/json" },
                body: JSON.stringify({
-                   items: items.map(item => ({ _id: item._id })), // Minimal info needed
+                   items: items.map(item => ({ 
+                       _id: item._id,
+                       name: item.name
+                   })), // Minimal info needed
                    paymentMethod: finalTotal === 0 ? 'free' : 'offline',
                    paymentProof,
                    couponCode: coupon?.code // Send coupon code if exists
@@ -57,15 +92,11 @@ export default function CheckoutPage() {
                throw new Error(data.error || "Order failed");
            }
 
-           clearCart();
-           toast.success("Order placed successfully!");
-           
-           if (data.status === 'approved') {
-               router.push("/dashboard");
-           } else {
-               // Pending page or dashboard order history
-               router.push("/dashboard/billing"); // or somewhere they can see orders
-           }
+            clearCart();
+            toast.success("Order placed successfully!");
+            
+            // Redirect to dedicated success page
+            router.push(`/checkout/success?orderId=${data.orderId}`);
 
        } catch (error: any) {
            toast.error(error.message);
@@ -93,14 +124,38 @@ export default function CheckoutPage() {
                                 <p className="text-muted-foreground">Your cart is empty.</p>
                             ) : (
                                 items.map(item => (
-                                    <div key={item._id} className="flex justify-between items-center py-2 border-b last:border-0">
-                                        <div>
+                                    <div key={item._id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 border-b last:border-0 gap-4">
+                                        <div className="flex-1">
                                             <h4 className="font-medium">{item.name}</h4>
-                                            <p className="text-sm text-muted-foreground"><PriceDisplay amount={item.price} /></p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <p className="text-sm text-muted-foreground">
+                                                    <PriceDisplay amount={item.price} /> x {item.duration || 1} month(s) = <strong className="text-foreground"><PriceDisplay amount={item.price * (item.duration || 1)} /></strong>
+                                                </p>
+                                            </div>
                                         </div>
-                                        <Button size="icon" variant="ghost" className="text-destructive h-8 w-8" onClick={() => removeFromCart(item._id)}>
-                                            <Trash2 size={16} />
-                                        </Button>
+                                        
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2">
+                                                <Label htmlFor={`duration-${item._id}`} className="text-xs text-muted-foreground hidden sm:block">Plan:</Label>
+                                                <Select 
+                                                    value={String(item.duration || 1)} 
+                                                    onValueChange={(val) => updateDuration(item._id, parseInt(val))}
+                                                >
+                                                    <SelectTrigger className="h-9 w-[120px]">
+                                                        <SelectValue placeholder="Duration" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="1">1 Month</SelectItem>
+                                                        <SelectItem value="3">3 Months</SelectItem>
+                                                        <SelectItem value="6">6 Months</SelectItem>
+                                                        <SelectItem value="12">1 Year</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <Button size="icon" variant="ghost" className="text-destructive h-8 w-8 ml-2" onClick={() => removeFromCart(item._id)}>
+                                                <Trash2 size={16} />
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))
                             )}
@@ -122,6 +177,44 @@ export default function CheckoutPage() {
                                     <span><PriceDisplay amount={finalTotal} /></span>
                                 </div>
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Coupon Code</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {coupon ? (
+                                <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                                    <div className="flex items-center gap-2">
+                                        <div className="bg-green-500 text-white p-1 rounded">
+                                            <ShoppingBag size={16} />
+                                        </div>
+                                        <span className="font-semibold uppercase">{coupon.code}</span>
+                                        <span className="text-sm text-green-600">Applied</span>
+                                    </div>
+                                    <Button variant="ghost" size="sm" className="h-8 text-destructive px-2" onClick={removeCoupon}>
+                                        Remove
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <Input 
+                                        placeholder="Enter coupon code" 
+                                        value={couponCode}
+                                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                                    />
+                                    <Button 
+                                        variant="outline" 
+                                        onClick={handleApplyCoupon}
+                                        disabled={applyingCoupon || !couponCode}
+                                    >
+                                        {applyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                                    </Button>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 

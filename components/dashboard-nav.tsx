@@ -19,9 +19,6 @@ export function DashboardNav() {
              <Link href="/dashboard/tools" className="transition-colors hover:text-foreground/80 text-foreground/60">
                 Tools
             </Link>
-            <Link href="/dashboard/tutorials" className="transition-colors hover:text-foreground/80 text-foreground/60">
-                Tutorials
-            </Link>
         </nav>
         <div className="ml-auto flex items-center space-x-4">
           <UserNav />

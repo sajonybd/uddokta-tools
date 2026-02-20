@@ -32,29 +32,10 @@ const UserSchema = new mongoose.Schema({
     enum: ['active', 'blocked'],
     default: 'active',
   },
-  subscriptions: [{
-    packageId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Package',
-    },
-    startDate: {
-      type: Date,
-      default: Date.now,
-    },
-    endDate: {
-      type: Date,
-      required: true,
-    },
-    status: {
-      type: String,
-      enum: ['active', 'expired', 'cancelled'],
-      default: 'active',
-    },
-    autoRenew: {
-      type: Boolean,
-      default: false,
-    },
-  }],
+  customId: {
+    type: Number,
+    unique: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

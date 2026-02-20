@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import Package from "@/models/Package";
+import Tool from "@/models/Tool";
+import Subscription from "@/models/Subscription";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -15,50 +17,67 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 
   const { id } = params;
   const body = await req.json();
-  const { packageId, durationDays, isTrial } = body;
+  const { packageId, durationDays, isTrial, itemType } = body;
 
   await dbConnect();
 
   try {
-    const pkg = await Package.findById(packageId);
-    if (!pkg) {
-        return NextResponse.json({ error: "Package not found" }, { status: 404 });
+    const targetItem = itemType === 'Tool' 
+        ? await Tool.findById(packageId)
+        : await Package.findById(packageId);
+
+    if (!targetItem) {
+        return NextResponse.json({ error: "Item not found" }, { status: 404 });
     }
 
     // Calculate dates
     const startDate = new Date();
     const endDate = new Date();
     
-    if (isTrial && pkg.isTrial) {
-         // Use provided duration or package default trial duration
-         const days = durationDays || pkg.trialDurationDays || 7;
-         endDate.setDate(startDate.getDate() + days);
+    if (durationDays) {
+        endDate.setDate(startDate.getDate() + Number(durationDays));
     } else {
         // Standard package duration logic
-        if (pkg.interval === 'monthly') {
-            endDate.setMonth(startDate.getMonth() + 1);
-        } else if (pkg.interval === 'yearly') {
-            endDate.setFullYear(startDate.getFullYear() + 1);
-        } else if (pkg.interval === 'lifetime') {
+        if (targetItem.interval === 'lifetime') {
             endDate.setFullYear(startDate.getFullYear() + 100);
+        } else if (targetItem.interval === 'yearly' || targetItem.price === 0 || targetItem.isTrial) {
+            endDate.setFullYear(startDate.getFullYear() + 1);
+        } else {
+            endDate.setMonth(startDate.getMonth() + 1);
         }
     }
 
-    const newSubscription = {
-        packageId: pkg._id,
-        startDate: startDate,
-        endDate: endDate,
-        status: 'active',
-        autoRenew: false // Default to false for manual assignment
-    };
+    // Check for existing active subscription
+    const existingSub = await Subscription.findOne({
+        user: id,
+        packageId: targetItem._id,
+        status: 'active'
+    });
 
-    const user = await User.findByIdAndUpdate(
-        id,
-        { $push: { subscriptions: newSubscription } },
-        { new: true }
-    );
+    if (existingSub) {
+        const currentEnd = new Date(existingSub.endDate);
+        const extendFrom = currentEnd > startDate ? currentEnd : startDate;
+        const newEnd = new Date(extendFrom);
+        newEnd.setDate(newEnd.getDate() + (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        existingSub.endDate = newEnd;
+        await existingSub.save();
+    } else {
+        await Subscription.create({
+            user: id,
+            packageId: targetItem._id,
+            itemType: itemType || 'Package',
+            startDate: startDate,
+            endDate: endDate,
+            status: 'active',
+            autoRenew: false
+        });
+    }
 
-    return NextResponse.json(user);
+    // Return user with populated subscription details from the new collection
+    const user = await User.findById(id).lean();
+    const subscriptions = await Subscription.find({ user: id }).populate('packageId');
+    
+    return NextResponse.json({ ...user, subscriptions });
 
   } catch (error) {
     console.error(error);
@@ -75,12 +94,12 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     }
 
     await dbConnect();
-    // Return user with populated subscription details
-    const user = await User.findById(params.id).populate('subscriptions.packageId');
-    
+    const user = await User.findById(params.id).lean();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    const subscriptions = await Subscription.find({ user: params.id }).populate('packageId');
     
-    return NextResponse.json(user);
+    return NextResponse.json({ ...user, subscriptions });
 }
 
 export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
@@ -96,13 +115,11 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
 
   await dbConnect();
   try {
-      // Pull (remove) the subscription with the matching subId
-      const user = await User.findByIdAndUpdate(
-          id,
-          { $pull: { subscriptions: { _id: subId } } },
-          { new: true }
-      );
-     return NextResponse.json(user);
+      await Subscription.findByIdAndDelete(subId);
+      
+      const user = await User.findById(id).lean();
+      const subscriptions = await Subscription.find({ user: id }).populate('packageId');
+      return NextResponse.json({ ...user, subscriptions });
   } catch(e) {
       return NextResponse.json({ error: "Failed to delete subscription" }, { status: 500 });
   }
@@ -121,20 +138,17 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
 
   await dbConnect();
   try {
-        // Update specific subscription field
-        const user = await User.findOneAndUpdate(
-            { _id: id, "subscriptions._id": subId },
-            { 
-                $set: { 
-                    "subscriptions.$.endDate": new Date(endDate),
-                    "subscriptions.$.status": status
-                }
-            },
-            { new: true }
-        );
-        return NextResponse.json(user);
+        await Subscription.findByIdAndUpdate(subId, { 
+            endDate: new Date(endDate),
+            status: status
+        });
+
+        const user = await User.findById(id).lean();
+        const subscriptions = await Subscription.find({ user: id }).populate('packageId');
+        return NextResponse.json({ ...user, subscriptions });
   } catch (e) {
       console.error(e);
       return NextResponse.json({ error: "Failed to update subscription" }, { status: 500 });
   }
 }
+

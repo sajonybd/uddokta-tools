@@ -97,9 +97,18 @@ export function DashboardSidebar() {
 
   return (
     <nav className="grid items-start gap-2 p-4">
+      {session?.user && (
+        <div className="px-4 py-6 mb-2 bg-primary/5 rounded-xl border border-primary/10">
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-bold text-primary">UID: {(session.user as any).customId || '....'}</span>
+            <span className="text-base font-semibold truncate text-foreground">{session.user.name}</span>
+            <span className="text-xs text-muted-foreground truncate">{session.user.email}</span>
+          </div>
+        </div>
+      )}
       <div className="px-2 py-2">
-         <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
-            Dashboard
+         <h2 className="mb-2 px-2 text-xs font-semibold tracking-tight text-muted-foreground uppercase">
+            Menu
           </h2>
         <div className="space-y-1">
           {navItems.map((item) => (
