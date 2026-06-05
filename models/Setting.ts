@@ -66,6 +66,14 @@ const SettingSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  affiliateFirstPurchasePercentage: {
+    type: Number,
+    default: 20,
+  },
+  affiliateRecurringPercentage: {
+    type: Number,
+    default: 10,
+  },
   // Google Analytics & Tag Manager
   gtmId: {
     type: String,
@@ -135,6 +143,13 @@ if (mongoose.models.Setting) {
       },
       affiliateUrl: { type: String, default: "/affiliate-program" },
       extensionDownloadUrl: { type: String, default: "" },
+    });
+  }
+
+  if (!schema.path('affiliateFirstPurchasePercentage')) {
+    Object.assign(fieldsToAdd, {
+      affiliateFirstPurchasePercentage: { type: Number, default: 20 },
+      affiliateRecurringPercentage: { type: Number, default: 10 },
     });
   }
 

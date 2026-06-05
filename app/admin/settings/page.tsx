@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Save, RefreshCw, BarChart, Facebook, MousePointerClick, Palette, Phone } from "lucide-react";
+import { Loader2, Save, RefreshCw, BarChart, Facebook, MousePointerClick, Palette, Phone, Percent } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -30,6 +30,8 @@ export default function SettingsPage() {
     contactAddress: "",
     affiliateUrl: "",
     extensionDownloadUrl: "",
+    affiliateFirstPurchasePercentage: 20,
+    affiliateRecurringPercentage: 10,
     gtmId: "",
     ga4MeasurementId: "",
     facebookPixelId: "",
@@ -65,6 +67,8 @@ export default function SettingsPage() {
             contactAddress: data.contactAddress || "",
             affiliateUrl: data.affiliateUrl || "",
             extensionDownloadUrl: data.extensionDownloadUrl || "",
+            affiliateFirstPurchasePercentage: data.affiliateFirstPurchasePercentage ?? 20,
+            affiliateRecurringPercentage: data.affiliateRecurringPercentage ?? 10,
             gtmId: data.gtmId || "",
             ga4MeasurementId: data.ga4MeasurementId || "",
             facebookPixelId: data.facebookPixelId || "",
@@ -116,9 +120,10 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="branding" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-4">
+        <TabsList className="grid w-full grid-cols-6 mb-4">
           <TabsTrigger value="branding"><Palette className="w-4 h-4 mr-2"/>Branding</TabsTrigger>
           <TabsTrigger value="contact"><Phone className="w-4 h-4 mr-2"/>Contact</TabsTrigger>
+          <TabsTrigger value="affiliate"><Percent className="w-4 h-4 mr-2"/>Affiliate</TabsTrigger>
           <TabsTrigger value="google"><BarChart className="w-4 h-4 mr-2"/>Google</TabsTrigger>
           <TabsTrigger value="facebook"><Facebook className="w-4 h-4 mr-2"/>Facebook / Meta</TabsTrigger>
           <TabsTrigger value="clarity"><MousePointerClick className="w-4 h-4 mr-2"/>Clarity</TabsTrigger>
@@ -206,6 +211,41 @@ export default function SettingsPage() {
                 <Label htmlFor="extensionDownloadUrl">Extension Download URL (Restricted)</Label>
                 <Input id="extensionDownloadUrl" placeholder="https://chromewebstore.google.com/..." value={settings.extensionDownloadUrl} onChange={handleChange} />
                 <p className="text-xs text-muted-foreground">Used by /download/extension. Only active subscribers can access the redirect.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="affiliate" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Affiliate commission settings</CardTitle>
+              <CardDescription>Define how much reward affiliates get when referring new subscribers.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="affiliateFirstPurchasePercentage">First Purchase Commission Percentage (%)</Label>
+                <Input 
+                  id="affiliateFirstPurchasePercentage" 
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="20" 
+                  value={settings.affiliateFirstPurchasePercentage} 
+                  onChange={handleChange} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="affiliateRecurringPercentage">Recurring Purchase Commission Percentage (%)</Label>
+                <Input 
+                  id="affiliateRecurringPercentage" 
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="10" 
+                  value={settings.affiliateRecurringPercentage} 
+                  onChange={handleChange} 
+                />
               </div>
             </CardContent>
           </Card>

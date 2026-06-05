@@ -167,6 +167,12 @@ export async function PUT(req: Request) {
                         });
                     }
                 }
+                try {
+                    const { processAffiliateCommission } = await import("@/lib/affiliate-utils");
+                    await processAffiliateCommission(order._id.toString());
+                } catch (affErr) {
+                    console.error("Failed to process affiliate commission:", affErr);
+                }
             }
             // Case 2: Revoking (Approved -> Rejected or Approved -> Pending)
             else if (oldStatus === 'approved' && (newStatus === 'rejected' || newStatus === 'pending')) {
@@ -195,6 +201,12 @@ export async function PUT(req: Request) {
                         }
                         await subscription.save();
                     }
+                }
+                try {
+                    const { revokeAffiliateCommission } = await import("@/lib/affiliate-utils");
+                    await revokeAffiliateCommission(order._id.toString());
+                } catch (affErr) {
+                    console.error("Failed to revoke affiliate commission:", affErr);
                 }
             }
         }

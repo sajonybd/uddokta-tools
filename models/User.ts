@@ -36,6 +36,11 @@ const UserSchema = new mongoose.Schema({
     type: Number,
     unique: true,
   },
+  referredBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

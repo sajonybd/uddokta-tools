@@ -9,6 +9,8 @@ import { FloatingContact } from "@/components/floating-contact";
 import { TrackingScripts, TrackingNoscript } from "@/components/tracking-scripts";
 import { buildSiteMetadata, getPublicSiteSettings } from "@/lib/site-settings";
 import { SiteSettingsProvider } from "@/components/providers/site-settings-provider";
+import { AffiliateTracker } from "@/components/affiliate-tracker";
+import { ImpersonationBanner } from "@/components/impersonation-banner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,12 +40,14 @@ export default async function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <TrackingNoscript />
+        <AffiliateTracker />
 
         <SiteSettingsProvider value={siteSettings}>
           <AuthProvider>
             <CurrencyProvider>
               {children}
             </CurrencyProvider>
+            <ImpersonationBanner />
             <Toaster />
             <Analytics />
             <FloatingContact />

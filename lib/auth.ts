@@ -29,6 +29,7 @@ export const authOptions: AuthOptions = {
           }
 
           const user = await User.findById(tokenDoc.userId);
+          const adminUserId = tokenDoc.adminUserId;
 
           // Consume token
           await ImpersonationToken.deleteOne({ _id: tokenDoc._id });
@@ -42,7 +43,14 @@ export const authOptions: AuthOptions = {
           }
 
           console.log("Authorize Impersonation Success. User Role from DB:", user.role);
-          return user;
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            customId: user.customId,
+            originalAdminId: adminUserId ? adminUserId.toString() : undefined,
+          } as any;
         }
 
         if (!credentials?.email || !credentials?.password) {
@@ -93,12 +101,28 @@ export const authOptions: AuthOptions = {
             const { getNextUserId } = await import("@/lib/user-utils");
             const customId = await getNextUserId();
 
+            const { cookies } = await import("next/headers");
+            let referredByUserId = undefined;
+            try {
+              const cookieStore = await cookies();
+              const referredByCookie = cookieStore.get("referredBy")?.value;
+              if (referredByCookie) {
+                const referrer = await User.findOne({ customId: Number(referredByCookie) });
+                if (referrer) {
+                  referredByUserId = referrer._id;
+                }
+              }
+            } catch (err) {
+              console.error("Failed to read referredBy cookie in OAuth flow:", err);
+            }
+
             await User.create({
               name: user.name,
               email: user.email,
               image: user.image,
               provider: "google",
               customId,
+              referredBy: referredByUserId,
             });
           }
           return true;
@@ -114,7 +138,10 @@ export const authOptions: AuthOptions = {
             (session.user as any).role = token.role;
             (session.user as any).id = token.id;
             (session.user as any).customId = token.customId;
+            (session.user as any).isImpersonated = token.isImpersonated;
+            (session.user as any).originalAdminId = token.originalAdminId;
         }
+        console.log("NextAuth Session Callback. User:", session.user);
         return session;
     },
     async jwt({ token, user, trigger, session }) {
@@ -143,6 +170,13 @@ export const authOptions: AuthOptions = {
                 }
            }
         }
+
+        if (user && (user as any).originalAdminId) {
+            token.originalAdminId = (user as any).originalAdminId;
+            token.isImpersonated = true;
+        }
+
+        console.log("NextAuth JWT Callback. Token isImpersonated:", token.isImpersonated, "originalAdminId:", token.originalAdminId);
         return token;
     }
   },

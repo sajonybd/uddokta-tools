@@ -33,22 +33,11 @@ export function UserActions({ id, email }: UserActionsProps) {
 
       toast.success("Impersonating user...");
 
-      const result = await signIn("credentials", {
+      await signIn("credentials", {
         email,
         impersonateToken: data.token,
         callbackUrl: "/",
-        redirect: false,
       });
-
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-
-      toast.success("Logged in successfully!");
-      
-      // Perform navigation and refresh local state
-      router.push("/");
-      router.refresh();
     } catch (err: any) {
       toast.error(err.message || "Failed to impersonate user");
     } finally {

@@ -11,6 +11,10 @@ const ImpersonationTokenSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+  adminUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -18,4 +22,8 @@ const ImpersonationTokenSchema = new mongoose.Schema({
   },
 });
 
-export default mongoose.models.ImpersonationToken || mongoose.model("ImpersonationToken", ImpersonationTokenSchema);
+if (mongoose.models.ImpersonationToken) {
+  delete mongoose.models.ImpersonationToken;
+}
+
+export default mongoose.model("ImpersonationToken", ImpersonationTokenSchema);

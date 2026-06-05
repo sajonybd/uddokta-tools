@@ -41,6 +41,11 @@ export function DashboardSidebar() {
       icon: CreditCard,
     },
     {
+      title: "Affiliate Program",
+      href: "/dashboard/affiliate",
+      icon: Banknote,
+    },
+    {
       title: "Settings",
       href: "/dashboard/settings",
       icon: Settings,
@@ -81,6 +86,11 @@ export function DashboardSidebar() {
     {
        title: "Manage Users",
        href: "/admin/users",
+       icon: Users,
+    },
+    {
+       title: "Affiliates Manager",
+       href: "/admin/affiliates",
        icon: Users,
     },
     {

@@ -29,12 +29,25 @@ export async function POST(req: Request) {
     const { getNextUserId } = await import("@/lib/user-utils");
     const customId = await getNextUserId();
 
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const referredByCookie = cookieStore.get("referredBy")?.value;
+    let referredByUserId = undefined;
+
+    if (referredByCookie) {
+      const referrer = await User.findOne({ customId: Number(referredByCookie) });
+      if (referrer) {
+        referredByUserId = referrer._id;
+      }
+    }
+
     await User.create({
       name,
       email,
       password: hashedPassword,
       provider: "credentials",
       customId,
+      referredBy: referredByUserId,
     });
 
     return NextResponse.json(

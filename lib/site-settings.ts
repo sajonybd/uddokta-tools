@@ -53,9 +53,25 @@ function normalizeSettings(raw: any): PublicSiteSettings {
   };
 
   return {
-    ...merged,
-    footerText:
-      merged.footerText || `© ${new Date().getFullYear()} ${merged.siteName}. All rights reserved.`,
+    siteName: merged.siteName,
+    siteTagline: merged.siteTagline,
+    logoUrl: merged.logoUrl,
+    faviconUrl: merged.faviconUrl,
+    footerText: merged.footerText || `© ${new Date().getFullYear()} ${merged.siteName}. All rights reserved.`,
+    seoTitle: merged.seoTitle,
+    seoDescription: merged.seoDescription,
+    supportEmail: merged.supportEmail,
+    supportPhone: merged.supportPhone,
+    whatsappNumber: merged.whatsappNumber,
+    facebookChatUrl: merged.facebookChatUrl,
+    whatsappMessage: merged.whatsappMessage,
+    websiteUrl: merged.websiteUrl,
+    contactAddress: merged.contactAddress,
+    affiliateUrl: merged.affiliateUrl,
+    gtmId: merged.gtmId,
+    ga4MeasurementId: merged.ga4MeasurementId,
+    facebookPixelId: merged.facebookPixelId,
+    microsoftClarityId: merged.microsoftClarityId,
   };
 }
 

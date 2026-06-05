@@ -235,6 +235,12 @@ export async function POST(req: Request) {
                 });
             }
         }
+        try {
+            const { processAffiliateCommission } = await import("@/lib/affiliate-utils");
+            await processAffiliateCommission(order._id.toString());
+        } catch (affErr) {
+            console.error("Failed to process affiliate commission:", affErr);
+        }
     }
 
     // 6. Server-Side CAPI Tracking (Purchase)

@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     await ImpersonationToken.create({
       token,
       userId,
+      adminUserId: (session.user as any).id,
     });
 
     return NextResponse.json({ success: true, token });
