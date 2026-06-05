@@ -114,7 +114,7 @@ export default function AdminUsersPage() {
                          </Button>
                      )}
                      <div className="inline-block ml-2">
-                        <UserActions id={user._id.toString()} />
+                        <UserActions id={user._id.toString()} email={user.email} />
                      </div>
                 </TableCell>
               </TableRow>

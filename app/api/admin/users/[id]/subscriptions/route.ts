@@ -21,6 +21,32 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 
   await dbConnect();
 
+  // Helper to count active users for a tool
+  const getActiveUserCountForTool = async (toolId: string) => {
+    const activeSubs = await Subscription.find({
+      status: "active",
+      endDate: { $gt: new Date() }
+    }).lean();
+
+    const packages = await Package.find({}).lean();
+    
+    const parentPackageIds = packages
+      .filter((pkg: any) => pkg.tools && pkg.tools.map((id: any) => id.toString()).includes(toolId))
+      .map((pkg: any) => pkg._id.toString());
+
+    const matchingSubs = activeSubs.filter((sub: any) => {
+      const targetIdStr = sub.packageId?.toString();
+      if (sub.itemType === 'Tool') {
+        return targetIdStr === toolId;
+      } else {
+        return parentPackageIds.includes(targetIdStr);
+      }
+    });
+
+    const uniqueUsers = new Set(matchingSubs.map((sub: any) => sub.user?.toString()));
+    return uniqueUsers.size;
+  };
+
   try {
     const targetItem = itemType === 'Tool' 
         ? await Tool.findById(packageId)
@@ -28,6 +54,35 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 
     if (!targetItem) {
         return NextResponse.json({ error: "Item not found" }, { status: 404 });
+    }
+
+    // Check for existing active subscription
+    const existingSub = await Subscription.findOne({
+        user: id,
+        packageId: targetItem._id,
+        status: 'active'
+    });
+
+    // Enforce max_slots check
+    if (itemType === 'Tool') {
+        if (targetItem.max_slots > 0) {
+            const activeCount = await getActiveUserCountForTool(targetItem._id.toString());
+            const userHasActiveSub = existingSub ? true : false;
+            if (!userHasActiveSub && activeCount >= targetItem.max_slots) {
+                return NextResponse.json({ error: `Tool ${targetItem.name} has reached its maximum user limit of ${targetItem.max_slots} active users.` }, { status: 400 });
+            }
+        }
+    } else {
+        for (const toolId of (targetItem.tools || [])) {
+            const tool = await Tool.findById(toolId);
+            if (tool && tool.max_slots > 0) {
+                const activeCount = await getActiveUserCountForTool(tool._id.toString());
+                const userHasActiveSub = existingSub ? true : false;
+                if (!userHasActiveSub && activeCount >= tool.max_slots) {
+                    return NextResponse.json({ error: `Tool ${tool.name} (included in package) has reached its maximum user limit of ${tool.max_slots} active users.` }, { status: 400 });
+                }
+            }
+        }
     }
 
     // Calculate dates
@@ -46,14 +101,6 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
             endDate.setMonth(startDate.getMonth() + 1);
         }
     }
-
-    // Check for existing active subscription
-    const existingSub = await Subscription.findOne({
-        user: id,
-        packageId: targetItem._id,
-        status: 'active'
-    });
-
     if (existingSub) {
         const currentEnd = new Date(existingSub.endDate);
         const extendFrom = currentEnd > startDate ? currentEnd : startDate;

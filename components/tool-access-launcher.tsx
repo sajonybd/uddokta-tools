@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { toast } from "sonner";
 
 interface ToolAccessLauncherProps {
   toolId: string;
@@ -17,7 +17,6 @@ type AccessResponse = {
 
 export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps) {
   const [loading, setLoading] = useState(false);
-  const [needsExtension, setNeedsExtension] = useState(false);
 
   const EXTENSION_READY_TIMEOUT_MS = 2500;
   const EXTENSION_RESULT_TIMEOUT_MS = 30000;
@@ -40,7 +39,10 @@ export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps
         const data = event.data;
         if (!data) return;
 
-        if (data.type === "SEO_TOOL_EXTENSION_READY" && (!data.requestId || data.requestId === requestId)) {
+        if (
+          (data.type === "SEO_TOOL_EXTENSION_READY" || data.type === "UDDOKTABD_EXTENSION_READY") &&
+          (!data.requestId || data.requestId === requestId)
+        ) {
           window.clearTimeout(timeout);
           window.removeEventListener("message", handler as EventListener);
           resolve(true);
@@ -49,6 +51,7 @@ export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps
 
       window.addEventListener("message", handler as EventListener);
       window.postMessage({ type: "SEO_TOOL_EXTENSION_PING", requestId }, "*");
+      window.postMessage({ type: "UDDOKTABD_EXTENSION_PING", requestId }, "*");
     });
   }
 
@@ -74,7 +77,13 @@ export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps
 
       const ready = await waitForExtensionReady(EXTENSION_READY_TIMEOUT_MS);
       if (!ready) {
-        setNeedsExtension(true);
+        toast.error("Extension not installed", {
+          description: "Please download and install the UddoktaBD Premium Tools extension to access this tool.",
+          action: {
+            label: "Download",
+            onClick: () => window.open("/download/extension", "_blank"),
+          },
+        });
         return;
       }
 
@@ -108,13 +117,21 @@ export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps
           if (event.source !== window) return;
           const data = event.data;
 
-          if (data?.type === "SEO_TOOL_ACCESS_ACK" && data.requestId === requestId) {
+          if (
+            (data?.type === "SEO_TOOL_ACCESS_ACK" || data?.type === "UDDOKTABD_ACCESS_ACK") &&
+            data.requestId === requestId
+          ) {
             acked = true;
             window.clearTimeout(ackTimeout);
             return;
           }
 
-          if (!data || data.type !== "SEO_TOOL_ACCESS_RESULT" || data.requestId !== requestId) return;
+          if (
+            !data ||
+            (data.type !== "SEO_TOOL_ACCESS_RESULT" && data.type !== "UDDOKTABD_ACCESS_RESULT") ||
+            data.requestId !== requestId
+          )
+            return;
           window.clearTimeout(timeout);
           window.clearTimeout(ackTimeout);
           window.removeEventListener("message", handler as EventListener);
@@ -130,17 +147,27 @@ export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps
           },
           "*"
         );
+        window.postMessage(
+          {
+            type: "UDDOKTABD_ACCESS_REQUEST",
+            requestId,
+            payload: access,
+          },
+          "*"
+        );
       });
 
       if (!extensionResult.ok) {
-        alert(
-          extensionResult.error ||
-            "Failed to apply login data. Please install/enable the extension and try again."
-        );
-        setNeedsExtension(true);
+        toast.error("Launch Failed", {
+          description: extensionResult.error || "Failed to apply login data. Please try again.",
+          action: {
+            label: "Download Extension",
+            onClick: () => window.open("/download/extension", "_blank"),
+          },
+        });
       }
     } catch (error: any) {
-      alert(error?.message || "Failed to launch tool");
+      toast.error(error?.message || "Failed to launch tool");
     } finally {
       setLoading(false);
     }
@@ -151,12 +178,6 @@ export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps
       <Button className="w-full h-12 text-lg" disabled={loading} onClick={handleLaunch}>
         {loading ? "Launching..." : `Launch ${toolName}`}
       </Button>
-
-      {needsExtension && (
-        <Button className="w-full" variant="outline" asChild>
-          <Link href="/download/extension">Download Extension</Link>
-        </Button>
-      )}
     </div>
   );
 }

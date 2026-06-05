@@ -268,6 +268,7 @@ export default function UserSubscriptionsPage() {
                                <SelectValue placeholder="Select duration" />
                            </SelectTrigger>
                            <SelectContent>
+                               <SelectItem value="7">7 Days</SelectItem>
                                <SelectItem value="30">1 Month</SelectItem>
                                <SelectItem value="90">3 Months</SelectItem>
                                <SelectItem value="180">6 Months</SelectItem>

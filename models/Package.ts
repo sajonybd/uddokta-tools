@@ -12,8 +12,12 @@ const PackageSchema = new mongoose.Schema({
   },
   interval: {
     type: String,
-    enum: ['monthly', 'yearly', 'lifetime'],
+    enum: ['weekly', 'monthly', 'yearly', 'lifetime'],
     default: 'monthly',
+  },
+  description: {
+    type: String,
+    default: "",
   },
   features: {
     type: [String],
@@ -48,10 +52,30 @@ const PackageSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  sortOrder: {
+    type: Number,
+    default: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
+
+if (mongoose.models.Package) {
+  const schema = mongoose.models.Package.schema;
+
+  if (!schema.path('description')) {
+    schema.add({
+      description: { type: String, default: "" },
+    });
+  }
+
+  if (!schema.path('sortOrder')) {
+    schema.add({
+      sortOrder: { type: Number, default: 0 },
+    });
+  }
+}
 
 export default mongoose.models.Package || mongoose.model('Package', PackageSchema);

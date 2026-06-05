@@ -41,6 +41,32 @@ export async function POST(req: Request) {
   
   const user = session.user as any;
 
+  // Helper to count active users for a tool
+  const getActiveUserCountForTool = async (toolId: string) => {
+    const activeSubs = await Subscription.find({
+      status: "active",
+      endDate: { $gt: new Date() }
+    }).lean();
+
+    const packages = await Package.find({}).lean();
+    
+    const parentPackageIds = packages
+      .filter((pkg: any) => pkg.tools && pkg.tools.map((id: any) => id.toString()).includes(toolId))
+      .map((pkg: any) => pkg._id.toString());
+
+    const matchingSubs = activeSubs.filter((sub: any) => {
+      const targetIdStr = sub.packageId?.toString();
+      if (sub.itemType === 'Tool') {
+        return targetIdStr === toolId;
+      } else {
+        return parentPackageIds.includes(targetIdStr);
+      }
+    });
+
+    const uniqueUsers = new Set(matchingSubs.map((sub: any) => sub.user?.toString()));
+    return uniqueUsers.size;
+  };
+
   try {
     const { items, paymentMethod, paymentProof, couponCode } = await req.json();
     // items should be [{ packageId, ... }]
@@ -61,6 +87,35 @@ export async function POST(req: Request) {
         }
 
         if (!targetItem) continue;
+
+        // Check if user already has an active subscription to this item
+        const existingSub = await Subscription.findOne({
+            user: user.id,
+            packageId: targetItem._id,
+            status: 'active'
+        });
+
+        // Enforce max_slots check
+        if (itemType === 'Tool') {
+            if (targetItem.max_slots > 0) {
+                const activeCount = await getActiveUserCountForTool(targetItem._id.toString());
+                const userHasActiveSub = existingSub ? true : false;
+                if (!userHasActiveSub && activeCount >= targetItem.max_slots) {
+                    return NextResponse.json({ error: `Tool ${targetItem.name} has reached its maximum user limit of ${targetItem.max_slots} active users.` }, { status: 400 });
+                }
+            }
+        } else {
+            for (const toolId of (targetItem.tools || [])) {
+                const tool = await Tool.findById(toolId);
+                if (tool && tool.max_slots > 0) {
+                    const activeCount = await getActiveUserCountForTool(tool._id.toString());
+                    const userHasActiveSub = existingSub ? true : false;
+                    if (!userHasActiveSub && activeCount >= tool.max_slots) {
+                        return NextResponse.json({ error: `Tool ${tool.name} (included in package ${targetItem.name}) has reached its maximum user limit of ${tool.max_slots} active users.` }, { status: 400 });
+                    }
+                }
+            }
+        }
 
         const durationMonths = item.durationMonths || 1;
         const pricePerMonth = targetItem.price;
@@ -136,6 +191,8 @@ export async function POST(req: Request) {
                  durationDays = 36500; // 100 years
              } else if (targetItem.interval === 'yearly') {
                  durationDays = 365 * (item.durationMonths || 1); // Respect year multipliers if any
+             } else if (targetItem.interval === 'weekly') {
+                 durationDays = 7 * (item.durationMonths || 1);
              } else if (targetItem.isTrial && (targetItem as any).trialDurationDays) {
                  durationDays = (targetItem as any).trialDurationDays;
              } else if (targetItem.isTrial || targetItem.price === 0) {

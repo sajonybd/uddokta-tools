@@ -55,7 +55,7 @@ const ToolSchema = new mongoose.Schema({
   },
   interval: {
     type: String,
-    enum: ['monthly', 'yearly', 'lifetime'],
+    enum: ['weekly', 'monthly', 'yearly', 'lifetime'],
     default: 'monthly',
   },
   packageId: {
@@ -63,6 +63,10 @@ const ToolSchema = new mongoose.Schema({
     ref: 'Package',
   },
   max_slots: {
+    type: Number,
+    default: 0,
+  },
+  position: {
     type: Number,
     default: 0,
   },
@@ -84,7 +88,7 @@ if (mongoose.models.Tool) {
     if (!schema.path('price')) {
         schema.add({ 
             price: { type: Number, default: 0 },
-            interval: { type: String, enum: ['monthly', 'yearly', 'lifetime'], default: 'monthly' },
+            interval: { type: String, enum: ['weekly', 'monthly', 'yearly', 'lifetime'], default: 'monthly' },
             packageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Package' }
         });
         console.log("Hot-patched Tool schema with new fields");
@@ -93,6 +97,11 @@ if (mongoose.models.Tool) {
         schema.add({
             loginMethod: { type: String, enum: ['none', 'cookies', 'localstorage', 'indexeddb', 'cloud'], default: 'none' },
             loginData: { type: mongoose.Schema.Types.Mixed, default: null }
+        });
+    }
+    if (!schema.path('position')) {
+        schema.add({
+            position: { type: Number, default: 0 }
         });
     }
 }

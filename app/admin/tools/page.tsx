@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, GripVertical } from "lucide-react";
 import { ToolActions } from "@/components/admin/tool-actions";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,6 +22,7 @@ export default function AdminToolsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleting, setDeleting] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     fetchTools();
@@ -30,12 +31,9 @@ export default function AdminToolsPage() {
   const fetchTools = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/tools"); // Need to check if this exist or use public one
-      // If /api/admin/tools doesn't exist, use /api/tools?status=all if implemented
-      // or just /api/packages?visibility=all? No, tools.
-      const res2 = await fetch("/api/tools"); 
-      const data = await res2.json();
-      if (res2.ok) {
+      const res = await fetch("/api/admin/tools");
+      const data = await res.json();
+      if (res.ok) {
         setTools(data);
       } else {
         toast.error("Failed to fetch tools");
@@ -87,6 +85,53 @@ export default function AdminToolsPage() {
     }
   };
 
+  // Drag and Drop Handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const reorderedTools = [...tools];
+    const [draggedItem] = reorderedTools.splice(draggedIndex, 1);
+    reorderedTools.splice(index, 0, draggedItem);
+    
+    setTools(reorderedTools);
+
+    const payload = reorderedTools.map((t: any, idx: number) => ({
+      id: t._id,
+      position: idx
+    }));
+
+    try {
+      const res = await fetch("/api/admin/tools", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: payload })
+      });
+      if (!res.ok) {
+        toast.error("Failed to save tool order");
+        fetchTools();
+      } else {
+        toast.success("Tool order updated successfully");
+      }
+    } catch (err) {
+      toast.error("Error updating tool order");
+      fetchTools();
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
   if (loading) return <div className="flex h-full items-center justify-center py-20"><Loader2 className="animate-spin" /></div>;
 
   return (
@@ -112,6 +157,7 @@ export default function AdminToolsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[40px]"></TableHead>
               <TableHead className="w-[50px]">
                 <Checkbox 
                     checked={selectedIds.length === tools.length && tools.length > 0}
@@ -121,6 +167,8 @@ export default function AdminToolsPage() {
               <TableHead className="w-[50px]">SI</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Category</TableHead>
+              <TableHead>Active Users</TableHead>
+              <TableHead>Limit/Max Slots</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>URL</TableHead>
@@ -129,7 +177,18 @@ export default function AdminToolsPage() {
           </TableHeader>
           <TableBody>
             {tools.map((tool: any, index: number) => (
-              <TableRow key={tool._id} className={selectedIds.includes(tool._id) ? "bg-muted/50" : ""}>
+              <TableRow 
+                key={tool._id} 
+                className={`${selectedIds.includes(tool._id) ? "bg-muted/50" : ""} transition-all duration-200 ${draggedIndex === index ? "opacity-40 border-2 border-dashed border-primary" : ""}`}
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={(e) => handleDrop(e, index)}
+                onDragEnd={handleDragEnd}
+              >
+                <TableCell className="w-[40px] cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+                  <GripVertical className="h-4 w-4" />
+                </TableCell>
                 <TableCell>
                     <Checkbox 
                         checked={selectedIds.includes(tool._id)}
@@ -139,6 +198,22 @@ export default function AdminToolsPage() {
                 <TableCell className="font-medium">{index + 1}</TableCell>
                 <TableCell className="font-medium">{tool.name}</TableCell>
                 <TableCell>{tool.category}</TableCell>
+                <TableCell>
+                  <Link href={`/admin/tools/${tool._id}/users`}>
+                    <Badge className="font-semibold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500/25 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/20 transition-all cursor-pointer text-xs py-1 px-2.5">
+                      {tool.activeUsers ?? 0} Active
+                    </Badge>
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  {tool.max_slots > 0 ? (
+                    <Badge variant="outline" className="border-amber-500 text-amber-500">
+                      Max {tool.max_slots}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">Unlimited</span>
+                  )}
+                </TableCell>
                 <TableCell>${tool.price}</TableCell>
                 <TableCell>
                     <Badge variant={tool.status === 'active' ? 'default' : 'secondary'}>
@@ -153,7 +228,7 @@ export default function AdminToolsPage() {
             ))}
             {tools.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                         No tools found. Create one to get started.
                     </TableCell>
                 </TableRow>

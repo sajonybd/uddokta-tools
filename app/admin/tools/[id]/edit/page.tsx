@@ -142,12 +142,18 @@ export default function EditToolPage() {
                         <SelectValue placeholder="Select interval" />
                     </SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
                         <SelectItem value="monthly">Monthly</SelectItem>
                         <SelectItem value="yearly">Yearly</SelectItem>
                         <SelectItem value="lifetime">Lifetime</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="max_slots">Max Slots / Limit User (0 for unlimited)</Label>
+          <Input id="max_slots" name="max_slots" type="number" defaultValue={tool.max_slots || 0} min="0" required />
         </div>
 
         <div className="space-y-2">
@@ -230,6 +236,17 @@ export default function EditToolPage() {
         <div className="space-y-2">
           <Label htmlFor="description">Description</Label>
           <Textarea id="description" name="description" defaultValue={tool.description} required />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="icon">Product Icon URL</Label>
+            <Input id="icon" name="icon" defaultValue={tool.icon || ""} placeholder="https://... or /icon.png" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="image">Product Image URL</Label>
+            <Input id="image" name="image" defaultValue={tool.image || ""} placeholder="https://... or /image.png" />
+          </div>
         </div>
 
         <div className="space-y-2">

@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
+import ImpersonationToken from "@/models/ImpersonationToken";
 import bcrypt from "bcryptjs";
 
 export const authOptions: AuthOptions = {
@@ -16,13 +17,37 @@ export const authOptions: AuthOptions = {
       credentials: {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
+        impersonateToken: { label: "Impersonate Token", type: "text" },
       },
       async authorize(credentials) {
+        await dbConnect();
+
+        if (credentials?.impersonateToken) {
+          const tokenDoc = await ImpersonationToken.findOne({ token: credentials.impersonateToken });
+          if (!tokenDoc) {
+            throw new Error("Invalid or expired impersonation token");
+          }
+
+          const user = await User.findById(tokenDoc.userId);
+
+          // Consume token
+          await ImpersonationToken.deleteOne({ _id: tokenDoc._id });
+
+          if (!user) {
+            throw new Error("User not found");
+          }
+
+          if (user.status === 'blocked') {
+            throw new Error("Your account has been blocked.");
+          }
+
+          console.log("Authorize Impersonation Success. User Role from DB:", user.role);
+          return user;
+        }
+
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Invalid credentials");
         }
-
-        await dbConnect();
 
         const user = await User.findOne({ email: credentials.email }).select("+password");
 

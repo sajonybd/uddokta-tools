@@ -37,6 +37,8 @@ function calculateDurationDays(item: any, targetItem: any) {
         durationDays = 36500; // 100 years
     } else if (targetItem?.interval === 'yearly') {
         durationDays = 365 * (item.durationMonths || 1);
+    } else if (targetItem?.interval === 'weekly') {
+        durationDays = 7 * (item.durationMonths || 1);
     } else if (targetItem?.isTrial && targetItem?.trialDurationDays) {
         durationDays = targetItem.trialDurationDays;
     } else if (targetItem?.isTrial || targetItem?.price === 0) {
@@ -55,6 +57,32 @@ export async function PUT(req: Request) {
         await checkAdmin();
         const { orderId, status, adminNote } = await req.json();
 
+        // Helper to count active users for a tool
+        const getActiveUserCountForTool = async (toolId: string) => {
+            const activeSubs = await Subscription.find({
+              status: "active",
+              endDate: { $gt: new Date() }
+            }).lean();
+
+            const packages = await Package.find({}).lean();
+            
+            const parentPackageIds = packages
+              .filter((pkg: any) => pkg.tools && pkg.tools.map((id: any) => id.toString()).includes(toolId))
+              .map((pkg: any) => pkg._id.toString());
+
+            const matchingSubs = activeSubs.filter((sub: any) => {
+              const targetIdStr = sub.packageId?.toString();
+              if (sub.itemType === 'Tool') {
+                return targetIdStr === toolId;
+              } else {
+                return parentPackageIds.includes(targetIdStr);
+              }
+            });
+
+            const uniqueUsers = new Set(matchingSubs.map((sub: any) => sub.user?.toString()));
+            return uniqueUsers.size;
+        };
+
         const order = await Order.findById(orderId);
         if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
@@ -65,6 +93,42 @@ export async function PUT(req: Request) {
         if (oldStatus !== newStatus) {
             // Case 1: Approving (Pending -> Approved or Rejected -> Approved)
             if (newStatus === 'approved') {
+                // Pre-validate max slot limit for all tools in the order
+                for (const item of order.items) {
+                    const targetItem = item.itemType === 'Tool'
+                        ? await Tool.findById(item.package)
+                        : await Package.findById(item.package);
+
+                    if (!targetItem) continue;
+
+                    const existingSub = await Subscription.findOne({
+                        user: order.user,
+                        packageId: targetItem._id,
+                        status: 'active'
+                    });
+
+                    if (item.itemType === 'Tool') {
+                        if (targetItem.max_slots > 0) {
+                            const activeCount = await getActiveUserCountForTool(targetItem._id.toString());
+                            const userHasActiveSub = existingSub ? true : false;
+                            if (!userHasActiveSub && activeCount >= targetItem.max_slots) {
+                                return NextResponse.json({ error: `Tool ${targetItem.name} has reached its maximum user limit of ${targetItem.max_slots} active users.` }, { status: 400 });
+                            }
+                        }
+                    } else {
+                        for (const toolId of (targetItem.tools || [])) {
+                            const tool = await Tool.findById(toolId);
+                            if (tool && tool.max_slots > 0) {
+                                const activeCount = await getActiveUserCountForTool(tool._id.toString());
+                                const userHasActiveSub = existingSub ? true : false;
+                                if (!userHasActiveSub && activeCount >= tool.max_slots) {
+                                    return NextResponse.json({ error: `Tool ${tool.name} (included in package ${targetItem.name}) has reached its maximum user limit of ${tool.max_slots} active users.` }, { status: 400 });
+                                }
+                            }
+                        }
+                    }
+                }
+
                 for (const item of order.items) {
                     const targetItem = item.itemType === 'Tool'
                         ? await Tool.findById(item.package)

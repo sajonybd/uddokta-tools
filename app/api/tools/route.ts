@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     if (!isAdmin) {
       toolQuery.select("-loginData");
     }
-    const tools = await toolQuery.sort({ createdAt: -1 });
+    const tools = await toolQuery.sort({ position: 1, createdAt: -1 });
     return NextResponse.json(tools);
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch tools" }, { status: 500 });
