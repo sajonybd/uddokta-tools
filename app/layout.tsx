@@ -34,7 +34,7 @@ export default async function RootLayout({
   const siteSettings = await getPublicSiteSettings();
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <TrackingScripts />
       </head>
