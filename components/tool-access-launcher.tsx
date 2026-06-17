@@ -7,6 +7,7 @@ import { toast } from "sonner";
 interface ToolAccessLauncherProps {
   toolId: string;
   toolName: string;
+  loginMethod?: string;
 }
 
 type AccessResponse = {
@@ -15,12 +16,46 @@ type AccessResponse = {
   loginData: any;
 };
 
-export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps) {
+// Official Chrome Web Store Extension ID
+const OFFICIAL_EXTENSION_ID = "naolbfdgjgfehcjeojagkoipnbokgjni";
+
+declare global {
+  interface Window {
+    chrome?: {
+      runtime: {
+        sendMessage: (
+          extensionId: string,
+          message: any,
+          options?: any,
+          responseCallback?: (response: any) => void
+        ) => void;
+        lastError?: any;
+      };
+    };
+  }
+}
+
+export function ToolAccessLauncher({ toolId, toolName, loginMethod }: ToolAccessLauncherProps) {
   const [loading, setLoading] = useState(false);
 
   const EXTENSION_READY_TIMEOUT_MS = 2500;
   const EXTENSION_RESULT_TIMEOUT_MS = 30000;
   const EXTENSION_ACK_TIMEOUT_MS = 1500;
+
+  const getButtonText = () => {
+    if (loading) return "Launching...";
+    const nameLower = toolName.toLowerCase();
+    if (nameLower.includes("chatgpt")) {
+      return "Login to ChatGPT";
+    }
+    if (nameLower.includes("grok")) {
+      return "Login to Grok";
+    }
+    if (loginMethod && loginMethod !== "none" && loginMethod !== "cloud") {
+      return `Login to ${toolName}`;
+    }
+    return `Launch ${toolName}`;
+  };
 
   async function waitForExtensionReady(timeoutMs: number) {
     const requestId =
@@ -55,6 +90,51 @@ export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps
     });
   }
 
+  async function checkExtensionInstalled(): Promise<boolean> {
+    if (typeof window === "undefined") return false;
+
+    const isLocalhost =
+      window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
+    return new Promise((resolve) => {
+      if (window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage) {
+        try {
+          window.chrome.runtime.sendMessage(
+            OFFICIAL_EXTENSION_ID,
+            { type: "PING" },
+            (response) => {
+              if (window.chrome.runtime.lastError) {
+                if (isLocalhost) {
+                  console.warn("Official extension not detected, running localhost fallback check...");
+                  waitForExtensionReady(EXTENSION_READY_TIMEOUT_MS).then(resolve);
+                } else {
+                  resolve(false);
+                }
+              } else if (response && response.type === "PONG") {
+                resolve(true);
+              } else {
+                if (isLocalhost) {
+                  waitForExtensionReady(EXTENSION_READY_TIMEOUT_MS).then(resolve);
+                } else {
+                  resolve(false);
+                }
+              }
+            }
+          );
+          return;
+        } catch (e) {
+          // fall through
+        }
+      }
+
+      if (isLocalhost) {
+        waitForExtensionReady(EXTENSION_READY_TIMEOUT_MS).then(resolve);
+      } else {
+        resolve(false);
+      }
+    });
+  }
+
   async function handleLaunch() {
     try {
       setLoading(true);
@@ -75,10 +155,10 @@ export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps
         return;
       }
 
-      const ready = await waitForExtensionReady(EXTENSION_READY_TIMEOUT_MS);
+      const ready = await checkExtensionInstalled();
       if (!ready) {
-        toast.error("Extension not installed", {
-          description: "Please download and install the UddoktaBD Premium Tools extension to access this tool.",
+        toast.error("Extension Verification Failed", {
+          description: "Please download and install the official UddoktaBD Premium Tools extension to access this tool.",
           action: {
             label: "Download",
             onClick: () => window.open("/download/extension", "_blank"),
@@ -102,7 +182,6 @@ export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps
 
         const ackTimeout = window.setTimeout(() => {
           if (!acked) {
-            // Content script should ACK quickly; if it doesn't, messages aren't reaching it.
             window.clearTimeout(timeout);
             window.removeEventListener("message", handler as EventListener);
             resolve({
@@ -175,8 +254,19 @@ export function ToolAccessLauncher({ toolId, toolName }: ToolAccessLauncherProps
 
   return (
     <div className="space-y-3">
-      <Button className="w-full h-12 text-lg" disabled={loading} onClick={handleLaunch}>
-        {loading ? "Launching..." : `Launch ${toolName}`}
+      <Button
+        className="w-full h-12 text-lg text-white font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-200 ease-in-out transform hover:-translate-y-0.5 rounded-xl flex items-center justify-center gap-2"
+        disabled={loading}
+        onClick={handleLaunch}
+      >
+        {loading ? (
+          <>
+            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Launching...
+          </>
+        ) : (
+          getButtonText()
+        )}
       </Button>
     </div>
   );

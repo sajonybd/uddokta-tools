@@ -123,7 +123,7 @@ export default async function ToolAccessPage(props: ToolAccessPageProps) {
                       <p className="text-sm text-foreground/80">
                           Click the button below to launch {tool.name}. A new window will open.
                       </p>
-                      <ToolAccessLauncher toolId={id} toolName={tool.name} />
+                      <ToolAccessLauncher toolId={id} toolName={tool.name} loginMethod={tool.loginMethod} />
                       <div className="flex items-start gap-2 text-xs text-muted-foreground bg-background/50 p-2 rounded">
                           <Info className="h-4 w-4 mt-0.5" />
                           <p>

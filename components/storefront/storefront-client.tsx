@@ -69,6 +69,11 @@ const whyUsItems = [
 
 const faqItems = [
   {
+    question: "Do you have a dedicated Google Chrome extension?",
+    answer:
+      "Yes, we have a dedicated Google Chrome extension named 'UddoktaBD Premium Tools' officially published in the Google Chrome Web Store. It enables secure, automated one-click login and session synchronization straight from your UddoktaBD user dashboard to premium platforms like ChatGPT and Grok.",
+  },
+  {
     question: "How fast do buyers get access after payment?",
     answer:
       "Most orders can be processed quickly after confirmation. If a tool needs manual setup, the delivery timeline can be communicated clearly in the product description or checkout flow.",
@@ -483,7 +488,7 @@ function HeroSection({ products }: { products: StorefrontProduct[] }) {
           </h1>
 
           <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Shop curated digital tools from DigiAid with clearer pricing, stronger trust signals,
+            Shop curated digital tools from UddoktaBD with clearer pricing, stronger trust signals,
             guided buying steps, and support that stays available after checkout.
           </p>
 
@@ -787,7 +792,7 @@ function FaqSection() {
               <div>
                 <p className="font-semibold text-foreground">Need help before ordering?</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Contact DigiAid directly on WhatsApp, Messenger, phone, or email before you place your order.
+                  Contact UddoktaBD directly on WhatsApp, Messenger, phone, or email before you place your order.
                 </p>
               </div>
             </div>
@@ -823,7 +828,7 @@ function CtaSection() {
         <div className="relative grid items-center gap-8 lg:grid-cols-[1.5fr_1fr]">
           <div>
             <h2 className="text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl">
-              Ready to shop trusted premium digital tools with DigiAid?
+              Ready to shop trusted premium digital tools with UddoktaBD?
             </h2>
             <p className="mt-4 max-w-xl text-white/70">
               Browse products, review the must-read terms, and contact support anytime if you need help choosing the right package.
@@ -876,7 +881,7 @@ export function StorefrontClient({ products, mode }: StorefrontClientProps) {
                   Production Catalog
                 </span>
                 <h1 className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
-                  Premium tools page redesigned with the `digiaid-builder` storefront UI
+                  Premium tools page redesigned with the modern premium storefront UI
                 </h1>
                 <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
                   This page now uses the builder-inspired product catalog look while still pulling real items from your live production database and admin panel.

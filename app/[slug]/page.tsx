@@ -84,7 +84,7 @@ export default async function PublicContentPage(props: PublicContentPageProps) {
         <div className="mt-10 rounded-2xl border border-primary/20 bg-primary/5 p-6">
           <h2 className="text-xl font-semibold text-foreground">Need direct help?</h2>
           <p className="mt-2 text-sm leading-7 text-muted-foreground sm:text-base">
-            Contact DigiAid on WhatsApp, Messenger, phone, or email if you need help before or after purchase.
+            Contact UddoktaBD on WhatsApp, Messenger, phone, or email if you need help before or after purchase.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <a

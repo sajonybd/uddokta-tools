@@ -8,6 +8,9 @@ import User from "@/models/User"; // Ensure model registered
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+// Prevent tree-shaking of model imports
+const _models = [Order, User];
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {

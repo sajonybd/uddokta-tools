@@ -197,7 +197,7 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="websiteUrl">Website URL</Label>
-                <Input id="websiteUrl" placeholder="https://digiaidit.com" value={settings.websiteUrl} onChange={handleChange} />
+                <Input id="websiteUrl" placeholder="https://tools.uddoktabd.com" value={settings.websiteUrl} onChange={handleChange} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="affiliateUrl">Affiliate Link</Label>

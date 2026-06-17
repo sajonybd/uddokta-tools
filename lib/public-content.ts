@@ -19,16 +19,23 @@ export function getPublicContent(siteName: string): Record<string, PublicContent
       eyebrow: "Who we are",
       sections: [
         {
-          heading: "Digital Tools by DigiAid",
+          heading: "Digital Tools by UddoktaBD",
           body: [
             `${siteName} is built for customers who want premium digital tools without the confusion that usually comes with group-buy style access.`,
             "We focus on clarity before purchase, guided onboarding after payment, and fast support whenever a customer gets stuck.",
           ],
         },
         {
+          heading: "Official Google Chrome Extension",
+          body: [
+            "We provide a dedicated browser helper extension named 'UddoktaBD Premium Tools' officially published in the Google Chrome Web Store.",
+            "This extension allows secure, seamless one-click session synchronization directly between your UddoktaBD user dashboard and premium tool environments (like ChatGPT and Grok), keeping your account access automated and secure."
+          ],
+        },
+        {
           heading: "What customers can expect",
           bullets: [
-            "Trusted premium digital tools by DigiAid",
+            "Trusted premium digital tools by UddoktaBD",
             "Clear package details, pricing, and product access information",
             "WhatsApp, Messenger, email, and phone support options",
             "Practical buying guidance for new customers",
@@ -52,7 +59,7 @@ export function getPublicContent(siteName: string): Record<string, PublicContent
         {
           heading: "How to get started",
           body: [
-            "Contact the DigiAid team with your audience details, traffic sources, and the product categories you want to promote.",
+            "Contact the UddoktaBD team with your audience details, traffic sources, and the product categories you want to promote.",
             "We will review your fit, share the next steps, and confirm the campaign workflow manually.",
           ],
         },
@@ -76,7 +83,7 @@ export function getPublicContent(siteName: string): Record<string, PublicContent
           bullets: [
             "A customer changes their mind after successful delivery or setup",
             "The customer does not read the product details, terms, or access requirements before purchase",
-            "Service interruption is caused by third-party platform changes outside DigiAid control",
+            "Service interruption is caused by third-party platform changes outside UddoktaBD control",
           ],
         },
       ],
@@ -191,7 +198,7 @@ export function getPublicContent(siteName: string): Record<string, PublicContent
             "Review pricing, included tools, terms, and support notes before buying",
             "Add the item to your cart or choose Buy Now",
             "Complete checkout with your contact details and payment information",
-            "Wait for confirmation and onboarding instructions from DigiAid support",
+            "Wait for confirmation and onboarding instructions from UddoktaBD support",
           ],
         },
       ],
@@ -214,7 +221,7 @@ export function getPublicContent(siteName: string): Record<string, PublicContent
           bullets: [
             "Confirm your order details were submitted correctly",
             "Review the product-specific access notes",
-            "Reach out to DigiAid support with your order details for help",
+            "Reach out to UddoktaBD support with your order details for help",
           ],
         },
       ],

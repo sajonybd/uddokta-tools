@@ -3,11 +3,11 @@ import mongoose from 'mongoose';
 const SettingSchema = new mongoose.Schema({
   siteName: {
     type: String,
-    default: "Digital Tools by DigiAid",
+    default: "UddoktaBD Premium Tools",
   },
   siteTagline: {
     type: String,
-    default: "Trusted Premium digital tools by DigiAid",
+    default: "Trusted Premium digital tools by UddoktaBD",
   },
   logoUrl: {
     type: String,
@@ -23,15 +23,15 @@ const SettingSchema = new mongoose.Schema({
   },
   seoTitle: {
     type: String,
-    default: "Digital Tools by DigiAid - Trusted Premium Digital Tools",
+    default: "UddoktaBD Premium Tools - Trusted Premium Digital Tools",
   },
   seoDescription: {
     type: String,
-    default: "Shop trusted premium digital tools with hands-on support from DigiAid.",
+    default: "Shop trusted premium digital tools with hands-on support from UddoktaBD.",
   },
   supportEmail: {
     type: String,
-    default: "info@digiaidit.com",
+    default: "support@uddoktabd.com",
   },
   supportPhone: {
     type: String,
@@ -48,11 +48,11 @@ const SettingSchema = new mongoose.Schema({
   },
   whatsappMessage: {
     type: String,
-    default: "Hello! I need support with Digital Tools by DigiAid.",
+    default: "Hello! I need support with UddoktaBD Premium Tools.",
   },
   websiteUrl: {
     type: String,
-    default: "https://digiaidit.com",
+    default: "https://tools.uddoktabd.com",
   },
   contactAddress: {
     type: String,
@@ -109,23 +109,23 @@ if (mongoose.models.Setting) {
 
   if (!schema.path('siteName')) {
     Object.assign(fieldsToAdd, {
-      siteName: { type: String, default: "Digital Tools by DigiAid" },
+      siteName: { type: String, default: "UddoktaBD Premium Tools" },
       siteTagline: {
         type: String,
-        default: "Trusted Premium digital tools by DigiAid",
+        default: "Trusted Premium digital tools by UddoktaBD",
       },
       logoUrl: { type: String, default: "/logo.png" },
       faviconUrl: { type: String, default: "/favicon.ico" },
       footerText: { type: String, default: "" },
       seoTitle: {
         type: String,
-        default: "Digital Tools by DigiAid - Trusted Premium Digital Tools",
+        default: "UddoktaBD Premium Tools - Trusted Premium Digital Tools",
       },
       seoDescription: {
         type: String,
-        default: "Shop trusted premium digital tools with hands-on support from DigiAid.",
+        default: "Shop trusted premium digital tools with hands-on support from UddoktaBD.",
       },
-      supportEmail: { type: String, default: "info@digiaidit.com" },
+      supportEmail: { type: String, default: "support@uddoktabd.com" },
       supportPhone: { type: String, default: "01316-414532" },
       whatsappNumber: { type: String, default: "8801316414532" },
       facebookChatUrl: {
@@ -134,9 +134,9 @@ if (mongoose.models.Setting) {
       },
       whatsappMessage: {
         type: String,
-        default: "Hello! I need support with Digital Tools by DigiAid.",
+        default: "Hello! I need support with UddoktaBD Premium Tools.",
       },
-      websiteUrl: { type: String, default: "https://digiaidit.com" },
+      websiteUrl: { type: String, default: "https://tools.uddoktabd.com" },
       contactAddress: {
         type: String,
         default: "Dhaka, Dhaka, Bangladesh, 1219",
@@ -155,7 +155,7 @@ if (mongoose.models.Setting) {
 
   if (!schema.path('websiteUrl')) {
     Object.assign(fieldsToAdd, {
-      websiteUrl: { type: String, default: "https://digiaidit.com" },
+      websiteUrl: { type: String, default: "https://tools.uddoktabd.com" },
     });
   }
 
