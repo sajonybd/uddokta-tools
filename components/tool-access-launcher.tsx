@@ -93,9 +93,6 @@ export function ToolAccessLauncher({ toolId, toolName, loginMethod }: ToolAccess
   async function checkExtensionInstalled(): Promise<boolean> {
     if (typeof window === "undefined") return false;
 
-    const isLocalhost =
-      window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-
     return new Promise((resolve) => {
       if (window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage) {
         try {
@@ -104,20 +101,12 @@ export function ToolAccessLauncher({ toolId, toolName, loginMethod }: ToolAccess
             { type: "PING" },
             (response) => {
               if (window.chrome.runtime.lastError) {
-                if (isLocalhost) {
-                  console.warn("Official extension not detected, running localhost fallback check...");
-                  waitForExtensionReady(EXTENSION_READY_TIMEOUT_MS).then(resolve);
-                } else {
-                  resolve(false);
-                }
+                // Fallback to postMessage check since the user's extension might not be updated to the new store version yet
+                waitForExtensionReady(EXTENSION_READY_TIMEOUT_MS).then(resolve);
               } else if (response && response.type === "PONG") {
                 resolve(true);
               } else {
-                if (isLocalhost) {
-                  waitForExtensionReady(EXTENSION_READY_TIMEOUT_MS).then(resolve);
-                } else {
-                  resolve(false);
-                }
+                waitForExtensionReady(EXTENSION_READY_TIMEOUT_MS).then(resolve);
               }
             }
           );
@@ -127,11 +116,7 @@ export function ToolAccessLauncher({ toolId, toolName, loginMethod }: ToolAccess
         }
       }
 
-      if (isLocalhost) {
-        waitForExtensionReady(EXTENSION_READY_TIMEOUT_MS).then(resolve);
-      } else {
-        resolve(false);
-      }
+      waitForExtensionReady(EXTENSION_READY_TIMEOUT_MS).then(resolve);
     });
   }
 
