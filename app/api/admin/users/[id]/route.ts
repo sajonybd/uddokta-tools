@@ -19,7 +19,7 @@ export async function PATCH(
 
   const { id } = params;
   const body = await req.json();
-  const { role, status } = body;
+  const { role, status, maxDevices } = body;
 
   await dbConnect();
 
@@ -28,7 +28,8 @@ export async function PATCH(
       id,
       { 
           ...(role && { role }), 
-          ...(status && { status }) 
+          ...(status && { status }),
+          ...(maxDevices !== undefined && { maxDevices }) 
       },
       { new: true }
     );

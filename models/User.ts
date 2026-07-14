@@ -18,6 +18,15 @@ const UserSchema = new mongoose.Schema({
   image: {
     type: String,
   },
+  phone: {
+    type: String,
+    sparse: true,
+    unique: true,
+  },
+  phoneVerified: {
+    type: Boolean,
+    default: false,
+  },
   provider: {
     type: String,
     default: 'credentials',
@@ -44,6 +53,10 @@ const UserSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
+  },
+  maxDevices: {
+    type: Number,
+    default: 1,
   },
 });
 

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { UserActions } from "@/components/admin/user-actions";
+import { ManageDevicesModal } from "@/components/admin/manage-devices-modal";
 
 interface User {
     _id: string;
@@ -22,6 +23,7 @@ interface User {
     role: string;
     status: string;
     createdAt: string;
+    maxDevices: number;
 }
 
 export default function AdminUsersPage() {
@@ -113,6 +115,13 @@ export default function AdminUsersPage() {
                              Block
                          </Button>
                      )}
+                     <div className="inline-block ml-2">
+                        <ManageDevicesModal 
+                           userId={user._id.toString()} 
+                           initialMaxDevices={user.maxDevices} 
+                           onUpdate={fetchUsers} 
+                        />
+                     </div>
                      <div className="inline-block ml-2">
                         <UserActions id={user._id.toString()} email={user.email} />
                      </div>

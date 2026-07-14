@@ -22,6 +22,7 @@ import { signIn } from "next-auth/react";
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email(),
+  phone: z.string().min(10, "Valid phone number is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -35,6 +36,7 @@ export default function SignupPage() {
     defaultValues: {
       name: "",
       email: "",
+      phone: "",
       password: "",
     },
   });
@@ -135,6 +137,24 @@ export default function SignupPage() {
                       <Input
                         placeholder="you@example.com"
                         type="email"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="+8801..."
+                        type="tel"
                         {...field}
                       />
                     </FormControl>

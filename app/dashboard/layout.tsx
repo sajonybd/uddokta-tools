@@ -1,5 +1,6 @@
 import { DashboardNav } from "@/components/dashboard-nav";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { DeviceLimitWarningClient } from "@/components/device-limit-warning";
 
 export default function DashboardLayout({
   children,
@@ -15,6 +16,7 @@ export default function DashboardLayout({
              <DashboardSidebar />
          </aside> 
         <main className="flex w-full flex-1 flex-col overflow-hidden">
+          <DeviceLimitWarningClient />
           {children}
         </main>
       </div>
