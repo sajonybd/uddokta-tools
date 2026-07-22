@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { SuspiciousActivityTable } from "@/components/admin/suspicious-activity-table";
 
 // Force dynamic rendering to get fresh stats
 export const dynamic = 'force-dynamic';
@@ -39,19 +40,35 @@ export default async function AdminDashboard() {
     DeviceSession.aggregate([
       {
         $group: {
-          _id: "$userId",
-          uniqueIps: { $addToSet: "$ip" },
-          sessionCount: { $sum: 1 },
-          lastActive: { $max: "$lastActive" }
+          _id: { userId: "$userId", ip: "$ip" },
+          userAgent: { $last: "$userAgent" },
+          lastActive: { $max: "$lastActive" },
+          sessionCountForIp: { $sum: 1 }
+        }
+      },
+      {
+        $group: {
+          _id: "$_id.userId",
+          ipCount: { $sum: 1 },
+          sessionCount: { $sum: "$sessionCountForIp" },
+          lastActive: { $max: "$lastActive" },
+          ips: {
+            $push: {
+              ip: "$_id.ip",
+              userAgent: "$userAgent",
+              lastActive: "$lastActive",
+              sessionCount: "$sessionCountForIp"
+            }
+          }
         }
       },
       {
         $project: {
           userId: "$_id",
-          ipCount: { $size: "$uniqueIps" },
+          ipCount: 1,
           sessionCount: 1,
           lastActive: 1,
-          ips: "$uniqueIps"
+          ips: 1
         }
       },
       {
@@ -74,7 +91,22 @@ export default async function AdminDashboard() {
   
   const suspiciousData = suspiciousSessions.map(s => {
     const user = suspiciousUserDetails.find(u => u._id.toString() === s.userId.toString());
-    return { ...s, user };
+    return {
+      userId: s.userId.toString(),
+      ipCount: s.ipCount,
+      sessionCount: s.sessionCount,
+      lastActive: s.lastActive instanceof Date ? s.lastActive.toISOString() : s.lastActive,
+      ips: s.ips.map((ipData: any) => ({
+        ip: ipData.ip,
+        userAgent: ipData.userAgent,
+        lastActive: ipData.lastActive instanceof Date ? ipData.lastActive.toISOString() : ipData.lastActive,
+        sessionCount: ipData.sessionCount
+      })),
+      user: user ? {
+        name: user.name,
+        email: user.email,
+      } : undefined
+    };
   }).filter(s => s.user);
 
   return (
@@ -187,44 +219,7 @@ export default async function AdminDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Unique IPs</TableHead>
-                    <TableHead>Last Active</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {suspiciousData.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
-                        No suspicious activity detected.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    suspiciousData.map((data: any) => (
-                      <TableRow key={data.userId.toString()}>
-                        <TableCell>
-                          <div className="font-medium">{data.user?.name}</div>
-                          <div className="text-xs text-muted-foreground">{data.user?.email}</div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="destructive">{data.ipCount} IPs</Badge>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {data.sessionCount} total sessions
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {new Date(data.lastActive).toLocaleDateString()}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <SuspiciousActivityTable data={suspiciousData} />
           </CardContent>
         </Card>
       </div>
