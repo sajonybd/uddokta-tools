@@ -19,6 +19,12 @@ export async function GET() {
   await dbConnect();
 
   try {
+      // Ensure models are registered for populate
+      Package.schema;
+      Tool.schema;
+      User.schema;
+      Subscription.schema;
+
       const allTools = await Tool.find({ status: 'active' }).sort({ createdAt: -1 });
       const user = session.user as any;
       const userId = user.id || user._id;
